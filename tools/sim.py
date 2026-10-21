@@ -8,6 +8,7 @@
   judge-brief [--out 文件]   汇总 .work/act-*.json，生成天道裁判简报
   apply                      校验并落地 .work/judge.json，写编年史、更新查看器，清空 .work
   direct "干预"              设置下一季的天命干预（空字符串清除）
+  thread "标题" "详情" [--actors 甲,乙]  登记一条悬而未决的线索，交天道日后推进或了结
   export [--out 文件]        导出完整推演记录（Markdown）
   build-viewer               重新生成 viewer/data.js
 """
@@ -99,6 +100,20 @@ class Sim:
             parts.append(s)
         return "\n".join(parts)
 
+    def last_acted(self):
+        last = {}
+        for t in self.log:
+            for a in t.get("acts") or []:
+                last[a["name"]] = t["turn"]
+        return last
+
+    def add_thread(self, title, detail, actors):
+        th = self.world.setdefault("threads", [])
+        nid = max([x["id"] for x in th] + [0]) + 1
+        th.append({"id": nid, "title": title[:20], "detail": detail[:120], "actors": [a for a in actors if a in self.chars],
+                   "since": self.world["turn"], "last": self.world["turn"]})
+        return nid
+
     def save(self):
         wj(p("sim", "world.json"), self.world)
         for n, c in self.chars.items():
@@ -163,6 +178,13 @@ class Sim:
             f"{n}|{c['faction']}|{self.age(n)}岁|{c['bio']}｜史载约{c['debut']}年登上舞台｜{c.get('hist') or ''}"
             for n in self.cfg["order"] for c in [self.chars[n]] if c["status"] == "未出场") or "无"
         mail = "、".join(f"{n}（{len(self.chars[n]['inbox'])}封）" for n in self.alive() if self.chars[n]["inbox"]) or "无"
+        now = self.world["turn"] + 1
+        threads = "\n".join(
+            f"#{x['id']} {x['title']}（第{x['since']}季起，已{now - 1 - x['last']}季无进展）：{x['detail']}" + (f"［相关：{'、'.join(x['actors'])}］" if x.get("actors") else "")
+            for x in sorted(self.world.get("threads") or [], key=lambda x: x["last"])) or "无"
+        la = self.last_acted()
+        idle = "、".join(f"{n}（{'从未' if n not in la else f'{now - 1 - la[n]}季'}）" for n in self.alive()
+                         if now - 1 - la.get(n, 0) >= 4) or "无"
         blocks = []
         for a in acts:
             act = a.get("action") or {}
@@ -196,10 +218,16 @@ class Sim:
 【登场名单与人物进退】
 - 历史已因亮魂附身而改变，史实走向只是参考：寿数将尽者可能如期病故，也可能因剧情而早逝或延年；因人事而死者（如被杀）要看本推演中的局势是否还会走到那一步。
 - 候场人物到了史载的时候，或剧情需要时，用 debuts 安排登场（同样可让“退场”者重新登场）。剧情暂时不需要、但仍在世的人，在 character_changes 里把状态设为“退场”；死亡用相应状态。
+【悬而未决的线索】（按搁置时间排序，最久的在前）
+{threads}
+- 每季必须推进或了结至少两条搁置最久的线索：可以写成背景事件放进 events，给出下文；已搁置 4 季以上的，本季必须有下文或了结。用 threads.update 记进展，threads.close 了结并写明结局。
+- 本季新出现、但三个月内办不完的事（请命未批、叛乱未平、密谋未发、承诺未兑现等），用 threads.open 登记，免得日后被遗忘。
+- 久未亲自思考的人物（4 季以上）：{idle}。他们的处境同样在变化，可在背景中交代，必要时点名登场。
+
 - 用 next_cast 点名下一季需要独立思考的人：身处事件中心、刚收到密信、局势骤变、或即将做出关键抉择者，一般 4-9 人；刘禅每季必定登场，无需列出。其余人物下一季照常行事、由你在背景中裁定。目前持有未拆密信者：{mail}
 
 输出一个JSON对象（只写JSON）：
-{{"summary":"本季大事记，史书笔法，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"城名(仅限已有城池：{'、'.join(self.world['cities'])})","owner":"蜀|魏|吴","troops":整数万}}],"faction_changes":[{{"faction":"蜀|魏|吴","food":增减整数,"morale":增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(STATUSES)}","role":"新职位或留空","loc":"所在城池或留空","faction":"若改投他国则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}],"debuts":[{{"name":"候场或退场人物","role":"职位","loc":"所在城池","why":"登场缘由，30字内"}}],"next_cast":[{{"name":"人物","why":"下季为何要他亲自思考，20字内"}}]}}
+{{"summary":"本季大事记，史书笔法，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"城名(仅限已有城池：{'、'.join(self.world['cities'])})","owner":"蜀|魏|吴","troops":整数万}}],"faction_changes":[{{"faction":"蜀|魏|吴","food":增减整数,"morale":增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(STATUSES)}","role":"新职位或留空","loc":"所在城池或留空","faction":"若改投他国则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}],"debuts":[{{"name":"候场或退场人物","role":"职位","loc":"所在城池","why":"登场缘由，30字内"}}],"next_cast":[{{"name":"人物","why":"下季为何要他亲自思考，20字内"}}],"threads":{{"open":[{{"title":"十字内","detail":"来龙去脉，80字内","actors":["人物"]}}],"update":[{{"id":编号,"detail":"新进展，60字内"}}],"close":[{{"id":编号,"outcome":"结局，60字内"}}]}}}}
 events 3-6条；只列出有变化的城池、关系和人物；被截获的密信不会送达收信人，而会被截获者得知。
 """
 
@@ -278,6 +306,25 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
                 cast.append(n)
                 why[n] = str(x.get("why") or "") if isinstance(x, dict) else ""
         self.world["cast"], self.world["cast_why"] = cast[:12], why
+        T = J.get("threads") if isinstance(J.get("threads"), dict) else {}
+        tlog = {"opened": [], "updated": [], "closed": []}
+        live = {x["id"]: x for x in self.world.setdefault("threads", [])}
+        turn = self.world["turn"] + 1
+        for u in T.get("update") or []:
+            x = live.get(u.get("id")) if isinstance(u, dict) else None
+            if x and u.get("detail"):
+                x["detail"], x["last"] = str(u["detail"])[:120], turn
+                tlog["updated"].append({"id": x["id"], "title": x["title"], "detail": x["detail"]})
+        for c in T.get("close") or []:
+            x = live.pop(c.get("id"), None) if isinstance(c, dict) else None
+            if x:
+                tlog["closed"].append({"id": x["id"], "title": x["title"], "outcome": str(c.get("outcome") or "")})
+        self.world["threads"] = list(live.values())
+        for o in T.get("open") or []:
+            if isinstance(o, dict) and o.get("title"):
+                nid = self.add_thread(str(o["title"]), str(o.get("detail") or ""), o.get("actors") or [])
+                self.world["threads"][-1]["since"] = self.world["threads"][-1]["last"] = turn
+                tlog["opened"].append({"id": nid, "title": str(o["title"])[:20]})
         for kn in J.get("knowledge") or []:
             if kn.get("name") in self.chars and kn.get("learns"):
                 self.chars[kn["name"]]["memory"].append("得知：" + kn["learns"])
@@ -289,7 +336,7 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             "events": [{"title": str(e.get("title", "")), "text": str(e.get("text", ""))} for e in (J.get("events") or [])[:8]],
             "director": self.world.get("director", ""), "changed": changed, "acts": acts,
             "before": before, "after": self.snapshot(),
-            "debuts": debuts, "exits": exits, "next_cast": [{"name": n, "why": why.get(n, "")} for n in cast[:12]],
+            "threads": tlog, "debuts": debuts, "exits": exits, "next_cast": [{"name": n, "why": why.get(n, "")} for n in cast[:12]],
         }
         self.log.append(entry)
         self.write_turn_md(entry)
@@ -312,6 +359,11 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             L += ["", "登场：" + "；".join(f"{d['name']}（{d['why']}）" if d.get("why") else d["name"] for d in t["debuts"])]
         if t.get("exits"):
             L += ["", "退场：" + "；".join(f"{d['name']}（{d['status']}）" for d in t["exits"])]
+        th = t.get("threads") or {}
+        if th.get("closed"):
+            L += ["", "了结：" + "；".join(f"{x['title']}——{x['outcome']}" for x in th["closed"])]
+        if th.get("opened"):
+            L += ["", "新线索：" + "、".join(x["title"] for x in th["opened"])]
         if t.get("next_cast"):
             L += ["", "下季登场：" + "、".join(d["name"] for d in t["next_cast"])]
         if t.get("acts"):
@@ -428,6 +480,7 @@ def main():
     x = sp.add_parser("judge-brief"); x.add_argument("--out")
     sp.add_parser("apply")
     x = sp.add_parser("direct"); x.add_argument("text")
+    x = sp.add_parser("thread"); x.add_argument("title"); x.add_argument("detail"); x.add_argument("--actors", default=""); x.add_argument("--since", type=int); x.add_argument("--last", type=int)
     x = sp.add_parser("export"); x.add_argument("--out")
     sp.add_parser("build-viewer")
     a = ap.parse_args()
@@ -482,6 +535,13 @@ def main():
         print(f"COMMIT_MSG: 第{t['turn']}季 {t['date']['main']}：{first}")
         print(t["summary"])
         if t["changed"]: print("变动城池：" + "、".join(t["changed"]))
+    elif a.cmd == "thread":
+        nid = S.add_thread(a.title, a.detail, [x for x in a.actors.split(",") if x])
+        th = S.world["threads"][-1]
+        if a.since is not None: th["since"] = a.since
+        th["last"] = a.last if a.last is not None else th["since"]
+        wj(p("sim", "world.json"), S.world); S.build_viewer()
+        print(f"已登记线索 #{nid}：{a.title}")
     elif a.cmd == "direct":
         S.world["director"] = a.text.strip()
         wj(p("sim", "world.json"), S.world); S.build_viewer()

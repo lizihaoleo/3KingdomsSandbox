@@ -294,6 +294,7 @@ table.cmp td:first-child{font-family:var(--f-serif)}
       <div class="col-side">
         <section class="card" id="person" aria-live="polite"></section>
         <section class="card chron" id="chron"></section>
+        <section class="card" id="threads"></section>
       </div>
     </div>
   </section>
@@ -595,6 +596,16 @@ function renderChron(){
     n?el("button",{type:"button",class:"linkbtn",onclick:()=>{actsIdx=chronIdx;go("acts")}},`展开众人心思与密信（${n} 人）`):el("p",{class:"empty",style:"margin-top:12px"},"本季无人登场。"));
 }
 
+/* ---------- 悬案 ---------- */
+function renderThreads(){
+  const T=[...(W.threads||[])].sort((a,b)=>a.last-b.last);
+  put($("threads"),el("div",{class:"card-h"},el("h2",{},"悬而未决"),el("span",{},`${T.length} 条 · 天道每季须推进搁置最久的`)),
+    T.length?el("div",{class:"evs",style:"display:flex;flex-direction:column;gap:10px"},T.map(x=>{const idle=W.turn-x.last;
+      return el("div",{},el("div",{style:"display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"},el("b",{style:"font-family:var(--f-serif)"},x.title),
+        el("span",{style:`font-size:12px;color:${idle>=4?"var(--bad)":"var(--muted)"}`},`第${x.since}季起 · ${idle?idle+"季无进展":"本季有进展"}`)),
+        el("div",{style:"font-size:13px;color:var(--ink-2)"},x.detail))})):el("p",{class:"empty"},"暂无。"));
+}
+
 /* ---------- 众人心思 ---------- */
 function renderActs(){
   const t=LOG[actsIdx],acts=t?.acts||[];
@@ -719,6 +730,6 @@ function go(v,noHash){
 }
 document.querySelectorAll("nav.views button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
 
-renderTop();renderFacts();buildMap();renderCityInfo();renderCourt();renderPerson();renderChron();
+renderTop();renderFacts();buildMap();renderCityInfo();renderCourt();renderPerson();renderChron();renderThreads();
 go((location.hash||"").slice(1)||"map",true);
 </script>
