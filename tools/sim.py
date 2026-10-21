@@ -137,7 +137,7 @@ class Sim:
             ag = (["刘禅"] if "刘禅" in alive else []) + [x for x in cast if x != "刘禅"]
             return ag[:n] if n else ag
         n = n or 7
-        must = [x for x in ["刘禅", "司马懿", "孙权", "曹叡"] if x in alive]
+        must = [x for x in ["刘禅", "张皇后", "司马懿", "孙权", "曹叡"] if x in alive]
         mail = [x for x in alive if self.chars[x]["inbox"] and x not in must]
         rest = [x for x in alive if x not in must and x not in mail]
         random.Random(self.world["turn"] * 7919 + len(self.log)).shuffle(rest)
