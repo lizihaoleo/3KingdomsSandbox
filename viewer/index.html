@@ -109,6 +109,10 @@ nav.views button[aria-current=page]{background:var(--gold);color:var(--on-gold)}
 .court .r{font-size:11px;color:var(--muted)}
 .court .mail{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--bad)}
 .court button.dead .n b{text-decoration:line-through;color:var(--muted)}
+.court button.off{opacity:.55;border-style:dashed}
+.court .next{position:absolute;right:6px;bottom:6px;font-size:10px;padding:0 5px;border-radius:3px;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold)}
+.chron .cast{margin:12px 0 0;font-size:13px;color:var(--ink-2)}
+.chron .cast b{color:var(--gold);font-weight:500;margin-right:6px}
 
 /* 人物 */
 .who-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -253,7 +257,7 @@ table.cmp td:first-child{font-family:var(--f-serif)}
           <div class="legend"><span><i style="background:var(--m-shu)"></i>蜀汉</span><span><i style="background:var(--m-wei)"></i>曹魏</span><span><i style="background:var(--m-wu)"></i>孙吴</span><span>浅色为三国疆域外诸部</span></div>
         </section>
         <section class="card">
-          <div class="card-h"><h2>群臣</h2><span>金框为本季登场 · 红点为有未拆密信</span></div>
+          <div class="card-h"><h2>群臣</h2><span>金框为本季登场 · “下季”为天道点名 · 红点为有未拆密信 · 虚框为候场或退场</span></div>
           <div class="court" id="court"></div>
         </section>
       </div>
@@ -278,7 +282,7 @@ if(!window.SIM){document.body.innerHTML='<p style="padding:24px">找不到 data.
 const SIM=window.SIM, CFG=SIM.cfg, W=SIM.world, LOG=SIM.log, CHARS=SIM.chars;
 const FACTIONS=CFG.factions, ORDER=CFG.order;
 const COL={蜀:"var(--shu)",魏:"var(--wei)",吴:"var(--wu)"};
-const DEAD=/阵亡|病故|被杀|赐死|遇害|身故/;
+const DEAD=/阵亡|病故|被杀|赐死|遇害|自尽|身故/;
 const SEASONS=["春","夏","秋","冬"];
 const $=id=>document.getElementById(id);
 const put=(node,...k)=>node.replaceChildren(...k.flat(Infinity).filter(x=>x!=null&&x!==false));
@@ -288,6 +292,9 @@ function sv(tag,attrs={},...kids){const e=document.createElementNS(NS,tag);for(c
 function cn(n){const d="〇一二三四五六七八九";if(n<=10)return n===10?"十":d[n];if(n<20)return "十"+(n%10?d[n%10]:"");return d[Math.floor(n/10)]+"十"+(n%10?d[n%10]:"")}
 const age=n=>W.year-CHARS[n].birth;
 const isDead=n=>DEAD.test(CHARS[n].status||"");
+const offstage=n=>["未出场","退场"].includes(CHARS[n].status);
+const onStage=n=>!isDead(n)&&!offstage(n);
+const NEXT=new Set(W.cast||[]);
 const sgn=v=>(v>0?"+":v<0?"−":"")+Math.abs(v);
 const turnLabel=t=>t.turn===0?"序幕":`第 ${t.turn} 季`;
 const latest=LOG.at(-1)||null;
@@ -360,14 +367,14 @@ const RIVERS=[
   {n:"",w:1.4,pts:[[114.4,38.4],[115.5,38.6],[116.6,38.7],[117.4,38.9]]}
 ];
 const LAKES=[[112.8,29.25,.45,.28],[116.25,29.1,.22,.45],[120.2,31.2,.3,.25],[117.55,31.6,.2,.12],[100.2,36.9,.55,.25],[102.7,24.85,.1,.2],[100.2,25.75,.08,.2]];
-const ZHOU=[["凉州",101.4,38.1],["雍州",106.4,35.7],["并州",112.0,38.4],["冀州",115.4,37.6],["幽州",116.6,40.3],["青州",118.6,36.5],["徐州",118.3,34.1],["兖州",115.9,35.4],["豫州",114.9,33.1],["司隶",111.9,35.4],["荆州",110.9,33.4],["益州",102.6,30.6],["南中",103.4,25.2],["荆州",111.4,28.2],["扬州",118.4,28.8],["交州",108.4,22.6]];
+const ZHOU=[["凉州",101.0,39.3],["雍州",106.4,35.7],["并州",111.2,38.9],["冀州",115.4,37.6],["幽州",117.6,40.6],["青州",120.0,37.0],["徐州",119.0,33.6],["兖州",115.9,35.4],["豫州",115.6,33.6],["司隶",111.9,35.4],["荆州",110.9,33.4],["益州",102.6,30.6],["南中",101.3,24.0],["荆州",111.4,28.2],["扬州",118.4,28.8],["交州",108.4,22.6]];
 const FOREIGN=[["鲜　卑",113.4,41.7],["羌",99.6,33.4],["胡",108.7,39.4],["夷　洲",121.1,23.5],["朱　崖",109.8,19.1]];
 const SEAS=[["渤海",119.9,38.6],["大　海",123.0,34.6],["东　海",123.2,29.6],["南　海",114.4,20.9]];
-const MTNS=[["秦　岭",109.6,33.6],["巴　山",106.9,31.9],["太　行",113.6,37.0],["祁　连",100.6,38.8],["大　别",115.6,31.3],["南　岭",112.6,25.2]];
+const MTNS=[["秦　岭",109.6,33.6],["巴　山",106.9,31.9],["太　行",113.6,37.0],["祁　连",100.0,38.0],["大　别",115.6,31.3],["南　岭",112.6,25.2]];
 // 疆域着色的锚点：城池之外的郡治，随就近城池易手
-const ANCHORS=[[105.8,21.0,"长沙"],[108.3,22.8,"长沙"],[113.3,23.1,"长沙"],[110.3,25.3,"长沙"],[118.3,26.1,"会稽"],[115,26.6,"武昌"],[115.9,28.7,"武昌"],[116.4,39.9,"邺"],[123,41.3,"邺"],[112.5,37.9,"邺"],[118.3,36.8,"邺"],[118,34.3,"寿春"],[102.6,37.9,"天水"],[100.4,38.9,"天水"],[98.5,39.7,"天水"],[103.8,36,"天水"],[100.5,25.5,"建宁"],[106.7,26.6,"建宁"],[99.2,25.1,"建宁"],[102.2,27.9,"建宁"]];
+const ANCHORS=[[98.5,39.7,"武威"],[100.4,38.9,"武威"],[118.3,26.1,"会稽"],[109.8,19.2,"番禺"],[108.3,22.8,"番禺"],[110.3,25.3,"零陵"],[115,26,"豫章"]];
 const CAPITALS={蜀:"成都",魏:"洛阳",吴:"建业"};
-const LABEL_DIR={天水:"left",五丈原:"up",洛阳:"up",寿春:"up",合肥:"down",剑阁:"left",上庸:"left",江陵:"left",宛:"up"};
+const LABEL_DIR={天水:"up",陇西:"left",武都:"left",阴平:"left",五丈原:"up",洛阳:"up",寿春:"up",合肥:"down",剑阁:"left",上庸:"left",江陵:"down",西陵:"up",永安:"left",武昌:"down",宛:"up",汝南:"left",襄平:"left"};
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 function hex(c){c=c.replace("#","");return[0,2,4].map(i=>parseInt(c.slice(i,i+2),16))}
 
@@ -423,7 +430,7 @@ function buildMap(){
   const changed=new Set(latest?.changed||[]),capital=new Set(Object.values(CAPITALS));
   for(const k in CFG.cities){
     const[x,y]=P(...CFG.cities[k]),c=W.cities[k],r=6+Math.sqrt(c.troops)*3.4,fv={蜀:"var(--m-shu)",魏:"var(--m-wei)",吴:"var(--m-wu)"}[c.owner];
-    const here=ORDER.filter(n=>CHARS[n].loc===k&&!isDead(n));
+    const here=ORDER.filter(n=>CHARS[n].loc===k&&onStage(n));
     const cg=sv("g",{class:"city"+(k===selCity?" sel":""),"data-city":k});
     if(changed.has(k))cg.append(sv("circle",{cx:x,cy:y,r:r+6,fill:"none",stroke:"var(--gold)","stroke-width":3}));
     if(capital.has(k)&&CAPITALS[c.owner]===k)cg.append(sv("circle",{cx:x,cy:y,r:r+3,fill:"none",stroke:"var(--map-ink)","stroke-width":1.4}));
@@ -451,7 +458,7 @@ function buildMap(){
 }
 function pickCity(k){selCity=k;svgEl.querySelectorAll(".city").forEach(c=>c.classList.toggle("sel",c.dataset.city===k));renderCityInfo()}
 function renderCityInfo(){
-  const k=selCity,c=W.cities[k],here=ORDER.filter(n=>CHARS[n].loc===k&&!isDead(n));
+  const k=selCity,c=W.cities[k],here=ORDER.filter(n=>CHARS[n].loc===k&&onStage(n));
   put($("cityinfo"),el("h3",{},k,el("span",{class:"chip",style:`background:${COL[c.owner]}`},c.owner),el("span",{style:"font-family:var(--f-ui);font-size:12px;font-weight:400;color:var(--muted)"},`驻军 ${c.troops} 万`+(CAPITALS[c.owner]===k?" · 都城":""))),
     here.length?el("div",{class:"who"},here.map(n=>el("button",{type:"button",onclick:()=>select(n,true)},n))):el("p",{class:"empty"},"城中无登场人物"));
 }
@@ -459,9 +466,10 @@ function renderCityInfo(){
 /* ---------- 群臣 ---------- */
 function renderCourt(){
   put($("court"),...ORDER.map(n=>{const c=CHARS[n];
-    return el("button",{type:"button",class:(appeared.has(n)?"on ":"")+(isDead(n)?"dead":""),"aria-pressed":n===selected?"true":"false",onclick:()=>select(n,true)},
+    return el("button",{type:"button",class:(appeared.has(n)?"on ":"")+(isDead(n)?"dead ":"")+(offstage(n)?"off":""),"aria-pressed":n===selected?"true":"false",onclick:()=>select(n,true)},
       el("span",{class:"n"},el("i",{style:`background:${COL[c.faction]}`}),el("b",{},n)),
-      el("span",{class:"r"},`${c.role} · ${c.loc}`),
+      el("span",{class:"r"},offstage(n)?(c.status==="未出场"?"候场":"退场"):isDead(n)?c.status:`${c.role} · ${c.loc}`),
+      NEXT.has(n)?el("span",{class:"next",title:"天道点名下季登场"},"下季"):null,
       c.inbox?.length?el("span",{class:"mail",role:"img","aria-label":"有未拆密信"}):null)}));
 }
 
@@ -526,6 +534,9 @@ function renderChron(){
     t.director?el("p",{class:"dir"},"天命 · "+t.director):null,
     el("p",{class:"sum"},t.summary),
     el("div",{class:"evs"},(t.events||[]).map(e=>el("div",{class:"ev"},el("b",{},e.title),el("span",{},e.text)))),
+    t.debuts?.length?el("p",{class:"cast"},el("b",{},"登场"),t.debuts.map(d=>d.name+(d.why?`（${d.why}）`:"")).join("；")):null,
+    t.exits?.length?el("p",{class:"cast"},el("b",{},"退场"),t.exits.map(d=>`${d.name}（${d.status}）`).join("；")):null,
+    t.next_cast?.length?el("p",{class:"cast"},el("b",{},"下季点名"),["刘禅",...t.next_cast.map(d=>d.name).filter(x=>x!=="刘禅")].join("、")):null,
     n?el("button",{type:"button",class:"linkbtn",onclick:()=>{actsIdx=chronIdx;go("acts")}},`展开众人心思与密信（${n} 人）`):el("p",{class:"empty",style:"margin-top:12px"},"本季无人登场。"));
 }
 
