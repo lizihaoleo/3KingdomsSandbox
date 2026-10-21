@@ -47,6 +47,14 @@ header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items
 .btn.primary{background:var(--gold);border-color:var(--gold);color:var(--on-gold);font-weight:700;padding:0 20px}
 .btn.primary:hover{background:var(--gold-hi)}
 .btn[aria-expanded=true]{border-color:var(--gold);color:var(--gold)}
+.sess{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);min-height:44px;padding:0 4px}
+.sess i{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.sess.busy i{background:var(--gold);animation:pulse 1.4s ease-in-out infinite}
+.sess.idle i{background:var(--good)}
+.btn.armed{background:var(--bad);border-color:var(--bad);color:var(--on-gold)}
+.btn:disabled{opacity:.45;cursor:default}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.sess.busy i{animation:none}}
 .decree{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
 .decree label{font-size:12px;color:var(--muted)}
 .decree input{flex:1 1 260px;min-width:0;min-height:44px;padding:0 12px;font:inherit;color:var(--ink);background:var(--sunk);border:1px solid var(--line-2);border-radius:4px}
@@ -220,6 +228,7 @@ table.cmp td:first-child{font-family:var(--f-serif)}
       <div class="when"><b id="date"></b><span id="when-sub"></span></div>
     </div>
     <div class="cmds">
+      <span class="sess" id="sess" role="status" hidden><i></i><span></span></span>
       <button class="btn primary" type="button" data-cmd="/turn">推演一季</button>
       <button class="btn" type="button" data-cmd="/turn 4">连推一年</button>
       <button class="btn" type="button" id="decree-toggle" aria-expanded="false" aria-controls="decree">天命干预</button>
@@ -311,7 +320,38 @@ function copy(cmd){
   const fail=()=>toast("复制被拦下了，请手动选中这条命令：",cmd);
   try{navigator.clipboard.writeText(cmd).then(ok,fail)}catch(e){fail()}
 }
-document.querySelectorAll("[data-cmd]").forEach(b=>b.addEventListener("click",()=>copy(b.dataset.cmd)));
+/* ---------- 按钮直接推进：经 Claude Code Remote 连接器给推演会话发固定命令 ---------- */
+// 只发白名单里的三条命令；天命干预含自由文字，仍走复制。会话推完后重建并重新发布本页，打开着的页面自动刷新
+const SESSION="session_01R2yYMkrSgmNCYFs5PpAYEW", PAGE_URL="https://claude.ai/artifact/Tse3nhhTeUnCHe32G1ZcTi", CCR="Claude Code Remote";
+const ALLOWED={"/turn":"确认推演一季？","/turn 4":"确认连推四季？","/outline":"确认整理大纲？"};
+let mcp=null, busy=false, armed=null, armTimer;
+function setBusy(b,label){busy=b;const e=$("sess");e.hidden=false;e.className="sess "+(b?"busy":"idle");e.lastElementChild.textContent=label||(b?"推演会话工作中…":"推演会话待命");
+  document.querySelectorAll("[data-cmd]").forEach(x=>x.disabled=b)}
+async function send(cmd){
+  if(!(cmd in ALLOWED))return;
+  const msg=`【季汉推演查看器】页面按钮：${cmd}\n按 CLAUDE.md 的流程执行，提交并推送，再运行 python3 tools/sim.py build-viewer，把 viewer/index.html 连同 data.js 重新发布到 ${PAGE_URL}。`;
+  setBusy(true,"正在送出…");
+  try{await mcp.callTool(CCR,"send_message",{session_id:SESSION,message:msg});setBusy(true,"已送达，推演会话工作中…");toast("已送往推演会话，推完后本页会自动刷新：",cmd)}
+  catch(e){setBusy(false);const c=e&&e.code;
+    if(c==="approval_required"||c==="not_in_manifest")toast("需要先允许本页使用 Claude Code Remote 连接器，再点一次。也可以手动发送：",cmd);
+    else if(c==="server_not_connected"||c==="needs_reauth")toast("Claude Code Remote 连接器不可用，请在 claude.ai 设置 → 连接器里检查。也可以手动发送：",cmd);
+    else if(c==="tool_error")toast("推演会话没有收下消息，可能已结束。请在新会话里手动发送：",cmd);
+    else toast(`发送结果不确定（${c||"未知错误"}），先别重复点。也可以手动发送：`,cmd)}
+}
+function disarm(){clearTimeout(armTimer);if(armed){armed.textContent=armed.dataset.label;armed.classList.remove("armed")}armed=null}
+function act(btn,cmd){
+  if(!mcp){copy(cmd);return}
+  if(busy)return;
+  if(armed!==btn){disarm();armed=btn;btn.dataset.label=btn.textContent;btn.textContent=ALLOWED[cmd]||"确认？";btn.classList.add("armed");armTimer=setTimeout(disarm,4000);return}
+  disarm();send(cmd);
+}
+document.querySelectorAll("[data-cmd]").forEach(b=>b.addEventListener("click",()=>act(b,b.dataset.cmd)));
+(window.claude?.use?window.claude.use("mcp"):Promise.resolve(null)).then(m=>{
+  if(!m)return;mcp=m;setBusy(false);
+  mcp.watchTool(CCR,"get_session",{session_id:SESSION},ev=>{
+    if(ev.type!=="data")return;const p=ev.result.payload||{},b=String((p.ccr||p).status_bucket||"");
+    if(/WORKING/.test(b))setBusy(true);else if(b)setBusy(false,/FAILED/.test(b)?"推演会话上一轮出错":"推演会话待命")},{refetchInterval:30000});
+}).catch(()=>{});
 $("decree-toggle").addEventListener("click",e=>{const f=$("decree"),open=f.hidden;f.hidden=!open;e.currentTarget.setAttribute("aria-expanded",open);if(open)$("decree-text").focus()});
 $("decree").addEventListener("submit",e=>{e.preventDefault();const v=$("decree-text").value.trim();copy(v?"/direct "+v:"/direct")});
 $("decree-now").textContent=W.director?`当前已设：${W.director}（留空提交即清除）`:"留空提交即清除已设的天命";
