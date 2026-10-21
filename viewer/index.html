@@ -245,6 +245,7 @@ table.cmp td:first-child{font-family:var(--f-serif)}
   <nav class="views" aria-label="视图">
     <button type="button" data-view="map">沙盘</button>
     <button type="button" data-view="acts">众人心思</button>
+    <button type="button" data-view="roster">人物名册</button>
     <button type="button" data-view="branches">平行历史</button>
   </nav>
 
@@ -266,8 +267,9 @@ table.cmp td:first-child{font-family:var(--f-serif)}
           <div class="legend"><span><i style="background:var(--m-shu)"></i>蜀汉</span><span><i style="background:var(--m-wei)"></i>曹魏</span><span><i style="background:var(--m-wu)"></i>孙吴</span><span>浅色为三国疆域外诸部</span></div>
         </section>
         <section class="card">
-          <div class="card-h"><h2>群臣</h2><span>金框为本季登场 · “下季”为天道点名 · 红点为有未拆密信 · 虚框为候场或退场</span></div>
+          <div class="card-h"><h2>群臣</h2><span>金框为本季登场 · “下季”为天道点名 · 红点为有未拆密信</span></div>
           <div class="court" id="court"></div>
+          <div id="court-more"></div>
         </section>
       </div>
       <div class="col-side">
@@ -279,6 +281,9 @@ table.cmp td:first-child{font-family:var(--f-serif)}
 
   <!-- 众人心思 -->
   <section id="v-acts" data-v="acts" class="view" hidden></section>
+
+  <!-- 人物名册 -->
+  <section id="v-roster" data-v="roster" class="view" hidden></section>
 
   <!-- 平行历史 -->
   <section id="v-branches" data-v="branches" class="view" hidden></section>
@@ -504,13 +509,27 @@ function renderCityInfo(){
 }
 
 /* ---------- 群臣 ---------- */
+function courtBtn(n,onPick){const c=CHARS[n];
+  return el("button",{type:"button",class:(appeared.has(n)?"on ":"")+(isDead(n)?"dead ":"")+(offstage(n)?"off":""),"aria-pressed":n===selected?"true":"false",onclick:onPick},
+    el("span",{class:"n"},el("i",{style:`background:${COL[c.faction]}`}),el("b",{},n)),
+    el("span",{class:"r"},offstage(n)?`${c.status==="未出场"?"候场":"退场"} · ${c.faction}`:isDead(n)?`${c.status} · ${c.faction}`:`${c.role} · ${c.loc}`),
+    NEXT.has(n)?el("span",{class:"next",title:"天道点名下季登场"},"下季"):null,
+    c.inbox?.length?el("span",{class:"mail",role:"img","aria-label":"有未拆密信"}):null)}
 function renderCourt(){
-  put($("court"),...ORDER.map(n=>{const c=CHARS[n];
-    return el("button",{type:"button",class:(appeared.has(n)?"on ":"")+(isDead(n)?"dead ":"")+(offstage(n)?"off":""),"aria-pressed":n===selected?"true":"false",onclick:()=>select(n,true)},
-      el("span",{class:"n"},el("i",{style:`background:${COL[c.faction]}`}),el("b",{},n)),
-      el("span",{class:"r"},offstage(n)?(c.status==="未出场"?"候场":"退场"):isDead(n)?c.status:`${c.role} · ${c.loc}`),
-      NEXT.has(n)?el("span",{class:"next",title:"天道点名下季登场"},"下季"):null,
-      c.inbox?.length?el("span",{class:"mail",role:"img","aria-label":"有未拆密信"}):null)}));
+  const on=ORDER.filter(onStage),hidden=ORDER.length-on.length;
+  put($("court"),on.map(n=>courtBtn(n,()=>select(n,true))));
+  put($("court-more"),hidden?el("button",{type:"button",class:"linkbtn",onclick:()=>go("roster")},`另有 ${hidden} 人候场、退场或已故，到名册查看`):null);
+}
+
+/* ---------- 名册：在场之外的人 ---------- */
+function renderRoster(){
+  const groups=[["在场",ORDER.filter(onStage),"正在舞台上的人物"],["退场",ORDER.filter(n=>CHARS[n].status==="退场"),"仍在世，剧情暂不需要，天道可让其重新登场"],
+    ["候场",ORDER.filter(n=>CHARS[n].status==="未出场"),"尚未登上舞台，到了时候或剧情需要由天道安排登场"],["已故",ORDER.filter(isDead),"已经离世的人物"]];
+  put($("v-roster"),
+    el("div",{class:"page-h"},el("div",{},el("h2",{},"人物名册"),el("div",{class:"sub"},`共 ${ORDER.length} 人 · 点人物查看档案`)),
+      el("button",{type:"button",class:"btn",onclick:()=>go("map")},"回到沙盘")),
+    groups.map(([t,ns,d])=>el("section",{class:"card"},el("div",{class:"card-h"},el("h2",{},`${t} · ${ns.length}`),el("span",{},d)),
+      ns.length?el("div",{class:"court"},ns.map(n=>courtBtn(n,()=>{select(n);go("map");$("person").scrollIntoView({block:"start"})}))):el("p",{class:"empty"},"暂无。"))));
 }
 
 /* ---------- 人物档案 ---------- */
@@ -634,12 +653,12 @@ function renderBranches(){
 }
 
 /* ---------- 视图切换 ---------- */
-const VIEWS=["map","acts","branches"];
+const VIEWS=["map","acts","roster","branches"];
 function go(v,noHash){
   if(!VIEWS.includes(v))v="map";
   document.querySelectorAll("[data-v]").forEach(s=>s.hidden=s.dataset.v!==v);
   document.querySelectorAll("nav.views button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));
-  if(v==="acts")renderActs();if(v==="branches")renderBranches();
+  if(v==="acts")renderActs();if(v==="roster")renderRoster();if(v==="branches")renderBranches();
   if(!noHash){try{history.replaceState(null,"",v==="map"?location.pathname+location.search:"#"+v)}catch(e){}}
 }
 document.querySelectorAll("nav.views button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
