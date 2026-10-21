@@ -3,7 +3,7 @@
 
 子命令：
   status                     当前日期与天下大势
-  pick [--n 7]               选出本季登场人物，写入 .work/agents.txt
+  pick [--n 上限]            取天道上季点名的登场人物（无则按旧法选 7 人），写入 .work/agents.txt
   brief 人物 [--out 文件]    生成该人物的私人简报（只含此人能知道的信息）
   judge-brief [--out 文件]   汇总 .work/act-*.json，生成天道裁判简报
   apply                      校验并落地 .work/judge.json，写编年史、更新查看器，清空 .work
@@ -16,8 +16,9 @@ import argparse, glob, json, os, random, re, shutil, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(ROOT, ".work")
 SEASONS = "春夏秋冬"
-DEAD = re.compile("阵亡|病故|被杀")
-STATUSES = ["在任", "出征", "下狱", "隐退", "阵亡", "病故", "被杀", "叛逃"]
+DEAD = re.compile("阵亡|病故|被杀|赐死|遇害|自尽")
+OFFSTAGE = ("未出场", "退场")  # 未出场：候场人物，到时由天道安排登场；退场：仍在世但剧情暂不需要
+STATUSES = ["在任", "出征", "下狱", "隐退", "退场", "叛逃", "阵亡", "病故", "被杀", "自尽"]
 ACTION_TYPES = ["内政", "军事", "外交", "谋略", "人事", "密信", "观望"]
 
 
@@ -74,7 +75,12 @@ class Sim:
         return self.world["year"] - self.chars[n]["birth"]
 
     def alive(self):
-        return [n for n in self.cfg["order"] if not DEAD.search(self.chars[n]["status"])]
+        """在场人物：在世且已登场、未退场。"""
+        return [n for n in self.cfg["order"] if not DEAD.search(self.chars[n]["status"]) and self.chars[n]["status"] not in OFFSTAGE]
+
+    def known(self):
+        """可以被提及、写信的人：在世且已登场（含退场者）。"""
+        return [n for n in self.cfg["order"] if not DEAD.search(self.chars[n]["status"]) and self.chars[n]["status"] != "未出场"]
 
     @staticmethod
     def rk(a, b):
@@ -101,8 +107,13 @@ class Sim:
         self.build_viewer()
 
     # ---------- 选人 ----------
-    def pick(self, n):
+    def pick(self, n=None):
         alive = self.alive()
+        cast = [x for x in self.world.get("cast") or [] if x in alive]
+        if cast:
+            ag = (["刘禅"] if "刘禅" in alive else []) + [x for x in cast if x != "刘禅"]
+            return ag[:n] if n else ag
+        n = n or 7
         must = [x for x in ["刘禅", "司马懿", "孙权", "曹叡"] if x in alive]
         mail = [x for x in alive if self.chars[x]["inbox"] and x not in must]
         rest = [x for x in alive if x not in must and x not in mail]
@@ -138,7 +149,7 @@ class Sim:
 {inbox}
 【你对他人的好恶（-100敌视…100亲信）】{rels or '无'}
 
-规则：只依据你这个身份能知道的信息行事；可以说谎、试探、结盟、背叛、拖延，一切以此人真实会有的考量为准。行动要具体可执行，本季只做一件主要的事。人物名必须用以下名单中的：{'、'.join(self.cfg['order'])}。
+规则：只依据你这个身份能知道的信息行事；可以说谎、试探、结盟、背叛、拖延，一切以此人真实会有的考量为准。行动要具体可执行，本季只做一件主要的事。人物名必须用以下名单中的：{'、'.join(self.known())}。
 
 输出一个JSON对象（只写JSON，不要其他文字）：
 {{"thought":"第一人称内心盘算，150-300字：你如何解读局势、揣测谁在想什么、权衡几种选择、为何选这一步","action":{{"type":"内政|军事|外交|谋略|人事|密信|观望 之一","target":"目标人物/城池/势力","detail":"具体做法，60字内"}},"public_speech":"在朝堂或军中公开说的话，可为空字符串","secret_letters":[{{"to":"人物名","content":"密信内容，80字内"}}],"memory":"本季想记住的要点，30字内"}}
@@ -146,7 +157,12 @@ class Sim:
 
     def judge_brief(self, agents, acts):
         chars = "\n".join(
-            f"{n}|{c['faction']}|{self.age(n)}岁|{c['role']}|{c['status']}|在{c['loc']}" for n, c in self.chars.items())
+            f"{n}|{c['faction']}|{self.age(n)}岁|{c['role']}|{c['status']}|在{c['loc']}｜{c.get('hist') or ''}"
+            for n in self.known() for c in [self.chars[n]])
+        pool = "\n".join(
+            f"{n}|{c['faction']}|{self.age(n)}岁|{c['bio']}｜史载约{c['debut']}年登上舞台｜{c.get('hist') or ''}"
+            for n in self.cfg["order"] for c in [self.chars[n]] if c["status"] == "未出场") or "无"
+        mail = "、".join(f"{n}（{len(self.chars[n]['inbox'])}封）" for n in self.alive() if self.chars[n]["inbox"]) or "无"
         blocks = []
         for a in acts:
             act = a.get("action") or {}
@@ -159,8 +175,11 @@ class Sim:
 
 要求：依据历史常识、兵力粮草、地理、人物能力与性格判断成败，有因果、有代价、偶有意外，不偏袒任何一方；一季之内不要发生过度剧变（攻城需兵力优势、远征需粮草）；行动之间会相互影响（密信可能被截获、谋略可能被识破）。年老者可能病故，但要合理。未登场人物与无人涉及之地维持现状，也可加入少量合理的背景事件（天灾、羌胡、山越、内乱等）。
 
-【人物（姓名|势力|年龄|职位|状态|所在）】
+【人物（姓名|势力|年龄|职位|状态|所在｜史实走向，仅供你参考）】
 {chars}
+
+【候场人物（尚未登场）】
+{pool}
 
 【天下大势】
 {self.world_brief()}
@@ -174,8 +193,13 @@ class Sim:
 {chr(10).join(blocks)}
 {('【天命干预：本季必须发生并据此推演】' + director) if director else ''}
 
+【登场名单与人物进退】
+- 历史已因亮魂附身而改变，史实走向只是参考：寿数将尽者可能如期病故，也可能因剧情而早逝或延年；因人事而死者（如被杀）要看本推演中的局势是否还会走到那一步。
+- 候场人物到了史载的时候，或剧情需要时，用 debuts 安排登场（同样可让“退场”者重新登场）。剧情暂时不需要、但仍在世的人，在 character_changes 里把状态设为“退场”；死亡用相应状态。
+- 用 next_cast 点名下一季需要独立思考的人：身处事件中心、刚收到密信、局势骤变、或即将做出关键抉择者，一般 4-9 人；刘禅每季必定登场，无需列出。其余人物下一季照常行事、由你在背景中裁定。目前持有未拆密信者：{mail}
+
 输出一个JSON对象（只写JSON）：
-{{"summary":"本季大事记，史书笔法，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"城名(仅限已有城池：{'、'.join(self.world['cities'])})","owner":"蜀|魏|吴","troops":整数万}}],"faction_changes":[{{"faction":"蜀|魏|吴","food":增减整数,"morale":增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(STATUSES)}","role":"新职位或留空","loc":"所在城池或留空","faction":"若改投他国则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}]}}
+{{"summary":"本季大事记，史书笔法，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"城名(仅限已有城池：{'、'.join(self.world['cities'])})","owner":"蜀|魏|吴","troops":整数万}}],"faction_changes":[{{"faction":"蜀|魏|吴","food":增减整数,"morale":增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(STATUSES)}","role":"新职位或留空","loc":"所在城池或留空","faction":"若改投他国则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}],"debuts":[{{"name":"候场或退场人物","role":"职位","loc":"所在城池","why":"登场缘由，30字内"}}],"next_cast":[{{"name":"人物","why":"下季为何要他亲自思考，20字内"}}]}}
 events 3-6条；只列出有变化的城池、关系和人物；被截获的密信不会送达收信人，而会被截获者得知。
 """
 
@@ -184,6 +208,8 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         names = set(self.cfg["order"])
         factions = self.cfg["factions"]
         changed = []
+        before = self.snapshot()
+        was_on = set(self.alive())
         intercepted = {(x.get("from"), x.get("to")): x.get("by") for x in J.get("intercepted_letters") or [] if isinstance(x, dict)}
         for n in agents:
             self.chars[n]["inbox"] = []
@@ -234,6 +260,24 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             if ch.get("role"): c["role"] = str(ch["role"])
             if ch.get("loc") in self.world["cities"]: c["loc"] = ch["loc"]
             if ch.get("faction") in factions: c["faction"] = ch["faction"]
+        debuts = []
+        for d in J.get("debuts") or []:
+            c = self.chars.get(d.get("name")) if isinstance(d, dict) else None
+            if not c or c["status"] not in OFFSTAGE:
+                continue
+            c["status"] = "在任"
+            if d.get("role"): c["role"] = str(d["role"])
+            if d.get("loc") in self.world["cities"]: c["loc"] = d["loc"]
+            debuts.append({"name": c["name"], "why": str(d.get("why") or "")})
+        exits = [{"name": n, "status": self.chars[n]["status"]} for n in self.cfg["order"] if n in was_on and n not in self.alive()]
+        on = self.alive()
+        cast, why = [], {}
+        for x in J.get("next_cast") or []:
+            n = x.get("name") if isinstance(x, dict) else x
+            if n in on and n not in cast:
+                cast.append(n)
+                why[n] = str(x.get("why") or "") if isinstance(x, dict) else ""
+        self.world["cast"], self.world["cast_why"] = cast[:12], why
         for kn in J.get("knowledge") or []:
             if kn.get("name") in self.chars and kn.get("learns"):
                 self.chars[kn["name"]]["memory"].append("得知：" + kn["learns"])
@@ -244,6 +288,8 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             "summary": str(J.get("summary") or "本季无大事。"),
             "events": [{"title": str(e.get("title", "")), "text": str(e.get("text", ""))} for e in (J.get("events") or [])[:8]],
             "director": self.world.get("director", ""), "changed": changed, "acts": acts,
+            "before": before, "after": self.snapshot(),
+            "debuts": debuts, "exits": exits, "next_cast": [{"name": n, "why": why.get(n, "")} for n in cast[:12]],
         }
         self.log.append(entry)
         self.write_turn_md(entry)
@@ -262,6 +308,12 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             L += [f"> 天命干预：{t['director']}", ""]
         L += [t["summary"], ""]
         L += [f"- **{e['title']}**：{e['text']}" for e in t.get("events", [])]
+        if t.get("debuts"):
+            L += ["", "登场：" + "；".join(f"{d['name']}（{d['why']}）" if d.get("why") else d["name"] for d in t["debuts"])]
+        if t.get("exits"):
+            L += ["", "退场：" + "；".join(f"{d['name']}（{d['status']}）" for d in t["exits"])]
+        if t.get("next_cast"):
+            L += ["", "下季登场：" + "、".join(d["name"] for d in t["next_cast"])]
         if t.get("acts"):
             L += ["", "### 众人心思与行动", ""]
             for a in t["acts"]:
@@ -287,18 +339,59 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         L += [f"- {n}｜{c['faction']}｜{self.age(n)}岁｜{c['role']}｜{c['status']}｜在{c['loc']}" for n, c in self.chars.items()]
         return "\n".join(L) + "\n"
 
+    def snapshot(self):
+        return {"cities": {k: {"owner": v["owner"], "troops": v["troops"]} for k, v in self.world["cities"].items()},
+                "factions": json.loads(json.dumps(self.world["factions"]))}
+
+    def branches(self, current):
+        """各本地分支的编年摘要与局势，供查看器对比平行历史。"""
+        import subprocess
+        git = lambda *a: subprocess.run(["git", *a], cwd=ROOT, capture_output=True, text=True)
+        names = [b for b in git("for-each-ref", "--format=%(refname:short)", "refs/heads").stdout.split() if b]
+        if current and current not in names:
+            names.insert(0, current)
+        res = []
+        for b in names:
+            if b == current:
+                log, world, chars = self.log, self.world, self.chars
+            else:
+                try:
+                    log = json.loads(git("show", f"{b}:chronicle/log.json").stdout)
+                    world = json.loads(git("show", f"{b}:sim/world.json").stdout)
+                except ValueError:
+                    continue
+                chars = {}
+                for n in self.cfg["order"]:
+                    try:
+                        chars[n] = json.loads(git("show", f"{b}:sim/characters/{n}.json").stdout)
+                    except ValueError:
+                        pass
+            res.append({
+                "name": b, "current": b == current,
+                "turns": [{"turn": t["turn"], "date": t["date"], "summary": t.get("summary", ""), "director": t.get("director", ""),
+                           "events": [e.get("title", "") for e in t.get("events", [])]} for t in log],
+                "cities": {k: v["owner"] for k, v in world["cities"].items()},
+                "troops": {k: v["troops"] for k, v in world["cities"].items()},
+                "dead": [n for n, c in chars.items() if re.search("阵亡|病故|被杀|赐死|遇害|身故", c.get("status", ""))],
+            })
+        return res
+
     def build_viewer(self):
         try:
             import subprocess
             branch = subprocess.run(["git", "branch", "--show-current"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
         except Exception:
             branch = ""
-        data = {"cfg": self.cfg, "world": self.world, "chars": self.chars, "log": self.log, "date": self.date(), "branch": branch}
+        try:
+            branches = self.branches(branch)
+        except Exception:
+            branches = []
+        data = {"cfg": self.cfg, "world": self.world, "chars": self.chars, "log": self.log, "date": self.date(),
+                "branch": branch, "branches": branches}
         with open(p("viewer", "data.js"), "w", encoding="utf-8") as f:
             f.write("window.SIM = " + json.dumps(data, ensure_ascii=False) + ";\n")
 
 
-# ---------- 校验 ----------
 def load_act(name, path, order):
     try:
         r = rj(path)
@@ -330,7 +423,7 @@ def main():
     ap = argparse.ArgumentParser(description="季汉推演引擎")
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("status")
-    x = sp.add_parser("pick"); x.add_argument("--n", type=int, default=7)
+    x = sp.add_parser("pick"); x.add_argument("--n", type=int, default=None)
     x = sp.add_parser("brief"); x.add_argument("name"); x.add_argument("--out")
     x = sp.add_parser("judge-brief"); x.add_argument("--out")
     sp.add_parser("apply")
@@ -347,6 +440,7 @@ def main():
         if S.world.get("director"): print("待生效天命干预：" + S.world["director"])
         dead = [n for n in S.cfg["order"] if DEAD.search(S.chars[n]["status"])]
         if dead: print("已故：" + "、".join(dead))
+        if S.world.get("cast"): print("天道点名下季登场：" + "、".join(S.world["cast"]))
     elif a.cmd == "pick":
         os.makedirs(WORK, exist_ok=True)
         for f in glob.glob(os.path.join(WORK, "*")):
@@ -364,7 +458,7 @@ def main():
             path = os.path.join(WORK, f"act-{n}.json")
             if not os.path.exists(path):
                 errs.append(f"缺少 {path}"); continue
-            r, e = load_act(n, path, S.cfg["order"])
+            r, e = load_act(n, path, S.known())
             if e: errs.append(e)
             else: acts.append(r)
         if errs:
