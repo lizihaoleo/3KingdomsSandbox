@@ -1,0 +1,262 @@
+<title>季汉推演 · 查看器</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@500;700&display=swap">
+<style>
+/* 沙盘布局：左侧舆图+人物关系，右侧编年史；手机端分页切换。青铜锈色纸面，三国以玉、钢、朱三色区分 */
+:root{
+  --bg:#e6eae3; --surface:#f3f5f0; --sunk:#dde3db; --ink:#1c231f; --muted:#5a675f; --line:#c3ccc4;
+  --accent:#86652a; --shu:#2c7a57; --wei:#38609b; --wu:#b2442e; --good:#2c7a57; --bad:#b2442e;
+  --river:#9db7c4;
+  --f-title:"Ma Shan Zheng","STKaiti","KaiTi",serif;
+  --f-serif:"Noto Serif SC","Songti SC","SimSun",serif;
+  --f-ui:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111614; --surface:#18201c; --sunk:#141b18; --ink:#e2e8e1; --muted:#93a299; --line:#2b3631;
+  --accent:#c9a35c; --shu:#52b086; --wei:#729ad8; --wu:#e2735c; --good:#52b086; --bad:#e2735c; --river:#2f4a57; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111614; --surface:#18201c; --sunk:#141b18; --ink:#e2e8e1; --muted:#93a299; --line:#2b3631;
+  --accent:#c9a35c; --shu:#52b086; --wei:#729ad8; --wu:#e2735c; --good:#52b086; --bad:#e2735c; --river:#2f4a57; color-scheme:dark}
+html,body{height:auto}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 40px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 20px;justify-content:space-between}
+h1{font-family:var(--f-title);font-weight:400;font-size:44px;line-height:1;margin:0;letter-spacing:.04em}
+.sub{color:var(--muted);font-size:13px;margin-top:6px;max-width:46em}
+.date{font-family:var(--f-serif);font-weight:700;font-size:18px;color:var(--accent)}
+.date small{display:block;font-family:var(--f-ui);font-weight:400;font-size:12px;color:var(--muted);letter-spacing:.06em}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.controls label{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+select,input[type=text]{font:inherit;color:var(--ink);background:var(--sunk);border:1px solid var(--line);border-radius:4px;padding:5px 8px}
+input[type=text]{flex:1 1 260px;min-width:0}
+button{font:inherit;cursor:pointer;border-radius:4px;border:1px solid var(--line);background:var(--sunk);color:var(--ink);padding:6px 12px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.status{font-size:12px;color:var(--muted);flex-basis:100%}
+.status.err{color:var(--bad)}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fact{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:8px 12px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.fact b{font-family:var(--f-serif);font-size:18px}
+.fact span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.fact span em{font-style:normal;color:var(--ink);font-weight:600}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;min-width:0}
+.card h2{font-family:var(--f-serif);font-size:15px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h2 span{font-family:var(--f-ui);font-weight:400;font-size:12px;color:var(--muted)}
+svg{display:block;width:100%;height:auto}
+.map-bg{fill:var(--sunk)}
+.river{fill:none;stroke:var(--river);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.road{stroke:var(--line);stroke-width:1.5;stroke-dasharray:3 3}
+.city text{font-size:12px;fill:var(--ink);paint-order:stroke;stroke:var(--sunk);stroke-width:3px;font-family:var(--f-serif)}
+.city .tr{font-size:10px;fill:var(--muted);font-family:var(--f-ui)}
+.city .changed{fill:none;stroke:var(--accent);stroke-width:2}
+.rel-node{cursor:pointer}
+.rel-node text{font-size:12px;fill:var(--ink);font-family:var(--f-serif)}
+.rel-node.dead text{fill:var(--muted);text-decoration:line-through}
+.rel-node.sel circle{stroke:var(--accent);stroke-width:3}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap;margin-top:6px}
+.legend i{display:inline-block;width:18px;height:3px;vertical-align:middle;margin-right:4px}
+.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;color:var(--surface);font-weight:600;letter-spacing:.04em}
+.c-蜀{background:var(--shu)} .c-魏{background:var(--wei)} .c-吴{background:var(--wu)}
+.person h3{font-family:var(--f-serif);font-size:20px;margin:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.meta{color:var(--muted);font-size:12px;margin:4px 0 8px}
+.label{font-size:11px;letter-spacing:.12em;color:var(--muted);margin:10px 0 4px}
+.thought{font-family:var(--f-serif);background:var(--sunk);border-left:3px solid var(--accent);padding:8px 10px;white-space:pre-wrap}
+ul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.rel-row{display:flex;justify-content:space-between;gap:10px;font-size:13px;cursor:pointer}
+.rel-row b{font-variant-numeric:tabular-nums}
+.pos{color:var(--good)} .neg{color:var(--bad)}
+.chron{display:flex;flex-direction:column;gap:12px;max-height:1100px;overflow-y:auto}
+.turn{border-top:1px solid var(--line);padding-top:10px}
+.turn:first-child{border-top:0;padding-top:0}
+.turn h3{font-family:var(--f-serif);font-size:16px;margin:0 0 4px;color:var(--accent)}
+.summary{font-family:var(--f-serif);font-size:15px;line-height:1.85;margin:0 0 8px}
+.ev{margin:0 0 6px;padding-left:10px;border-left:2px solid var(--line)}
+.ev b{font-family:var(--f-serif)}
+details{margin-top:6px}
+summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.acts{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.act{background:var(--sunk);border-radius:4px;padding:8px 10px}
+.act-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.act-h b{font-family:var(--f-serif);font-size:14px;cursor:pointer}
+.act .t{font-family:var(--f-serif);color:var(--muted);font-size:13px;margin:4px 0;white-space:pre-wrap}
+.act .s{margin:4px 0}
+.act .s::before{content:"曰：";color:var(--accent)}
+.letter{font-size:12px;border:1px dashed var(--line);padding:4px 8px;margin-top:4px;border-radius:4px}
+.letter::before{content:"密 ";color:var(--bad);font-weight:700}
+.thinking{color:var(--muted);font-size:13px;font-style:italic}
+.tabs{display:none;gap:6px}
+.tabs button[aria-pressed=true]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.outline{font-family:var(--f-serif);white-space:pre-wrap;max-height:640px;overflow-y:auto;background:var(--sunk);padding:10px 12px;border-radius:4px;line-height:1.8}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.notice{background:var(--sunk);border:1px solid var(--line);padding:10px 12px;border-radius:6px;font-size:13px}
+@media (max-width:900px){
+  h1{font-size:34px}
+  .grid{grid-template-columns:minmax(0,1fr)}
+  .facts{grid-template-columns:minmax(0,1fr)}
+  .tabs{display:flex;flex-wrap:wrap}
+  .pane{display:none}
+  body[data-tab=map] .pane[data-pane=map],body[data-tab=rel] .pane[data-pane=rel],
+  body[data-tab=chron] .pane[data-pane=chron],body[data-tab=person] .pane[data-pane=person]{display:block}
+  .chron{max-height:none}
+}
+@media (prefers-reduced-motion:no-preference){.city circle{transition:r .4s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>季汉推演</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="date" id="date"></div>
+  </header>
+  <div class="facts" id="facts"></div>
+  <div class="tabs" role="tablist">
+    <button data-tab="map" aria-pressed="true">舆图</button>
+    <button data-tab="rel" aria-pressed="false">人物关系</button>
+    <button data-tab="chron" aria-pressed="false">编年史</button>
+    <button data-tab="person" aria-pressed="false">人物</button>
+  </div>
+  <div class="grid">
+    <div class="col">
+      <section class="card pane" data-pane="map"><h2>天下舆图 <span>圆大小＝驻军（万），金圈＝上一季有变动</span></h2><div id="map"></div></section>
+      <section class="card pane" data-pane="rel"><h2>人物关系 <span>点人物查看心思</span></h2><div id="rel"></div>
+        <div class="legend"><span><i style="background:var(--good)"></i>亲善/信任</span><span><i style="background:var(--bad)"></i>敌视/猜忌</span><span>线越粗关系越强，仅显示 |值|≥30</span></div></section>
+    </div>
+    <div class="col">
+      <section class="card pane person" data-pane="person" id="person"></section>
+      <section class="card pane" data-pane="chron"><h2>编年史 <span>新事在上</span></h2><div class="chron" id="chron"></div></section>
+    </div>
+  </div>
+</div>
+<script src="data.js"></script>
+<script>
+if(!window.SIM){document.body.innerHTML='<p style="padding:24px">找不到 data.js。请先在项目里运行 <code>python3 tools/sim.py build-viewer</code>。</p>';throw 0}
+
+const FACTIONS=["蜀","魏","吴"];
+const FCOL={蜀:"var(--shu)",魏:"var(--wei)",吴:"var(--wu)"};
+
+const SEASONS=["春","夏","秋","冬"];
+function rk(a,b){return a<b?a+"|"+b:b+"|"+a}
+function cn(n){const d="〇一二三四五六七八九";if(n<=10)return n===10?"十":d[n];if(n<20)return "十"+(n%10?d[n%10]:"");return d[Math.floor(n/10)]+"十"+(n%10?d[n%10]:"")}
+const SIM=window.SIM;
+function dateLabel(y,s){const e=SIM.cfg.era;return {main:`${e.name}${cn(y-e.base)}年 · ${SEASONS[s]}`,sub:`公元 ${y} 年`}}
+const CITIES=SIM.cfg.cities, ROADS=SIM.cfg.roads;
+const CH=SIM.cfg.order.map(n=>({n,f:SIM.chars[n].faction,b:SIM.chars[n].birth,bio:SIM.chars[n].bio,p:SIM.chars[n].persona}));
+const W=SIM.world;
+const S={turn:W.turn,year:W.year,season:W.season,cities:W.cities,rel:W.rel,factions:W.factions,chars:SIM.chars,log:SIM.log};
+function age(n){return S.year-SIM.chars[n].birth}
+let selected="刘禅",live=null,lastChanged=new Set((S.log.at(-1)||{}).changed||[]);
+
+const $=id=>document.getElementById(id);
+function el(tag,attrs={},...kids){const e=document.createElement(tag);for(const k in attrs){if(k==="class")e.className=attrs[k];else if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}for(const k of kids.flat()){if(k==null||k===false)continue;e.append(k.nodeType?k:String(k))}return e}
+const NS="http://www.w3.org/2000/svg";
+function sv(tag,attrs={},...kids){const e=document.createElementNS(NS,tag);for(const k in attrs){if(k.startsWith("on"))e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k])}kids.flat().forEach(k=>k!=null&&e.append(k.nodeType?k:String(k)));return e}
+const px=lon=>(lon-102)*28.4+30, py=lat=>(37.5-lat)*30+20;
+
+function renderAll(){renderDate();renderFacts();renderMap();renderRel();renderPerson();renderChron()}
+function renderDate(){const d=dateLabel(S.year,S.season);$("date").replaceChildren(el("small",{},`第 ${S.turn} 季 · ${d.sub}`),d.main)}
+function renderFacts(){
+  $("facts").replaceChildren(...FACTIONS.map(f=>{
+    const troops=Object.values(S.cities).filter(c=>c.owner===f).reduce((a,c)=>a+c.troops,0);
+    const ncity=Object.values(S.cities).filter(c=>c.owner===f).length;
+    const F=S.factions[f];
+    return el("div",{class:"fact"},el("b",{style:`color:${FCOL[f]}`},f),
+      el("span",{},"城 ",el("em",{},ncity)),el("span",{},"兵 ",el("em",{},troops),"万"),el("span",{},"粮 ",el("em",{},F.food)),el("span",{},"民心 ",el("em",{},F.morale)))}));
+}
+const LABEL_DIR={"五丈原":"up","天水":"left","洛阳":"left","合肥":"down"};
+function renderMap(){
+  const svg=sv("svg",{viewBox:"0 0 600 440",role:"img","aria-label":"三国舆图"});
+  svg.append(sv("rect",{class:"map-bg",x:0,y:0,width:600,height:440,rx:6}));
+  const line=pts=>pts.map(([a,b],i)=>(i?"L":"M")+px(a).toFixed(1)+","+py(b).toFixed(1)).join(" ");
+  svg.append(sv("path",{class:"river",d:line([[103.5,28.8],[106.5,29.5],[109.5,30.9],[112.2,30.1],[114.9,30.3],[117,30.6],[118.8,31.9],[121,31.6]])}));
+  svg.append(sv("path",{class:"river",d:line([[102.5,35.8],[105,36.6],[107.5,37.3],[110.3,35.6],[110.5,34.7],[112.4,34.9],[114.5,35.3],[116.5,36.6],[118.6,37.4]])}));
+  svg.append(sv("path",{class:"river",style:"stroke-width:2",d:line([[107,33.2],[110,32.7],[112.1,32.1],[114.2,30.6]])}));
+  [["长江",115.8,30.0],["黄河",109.2,36.8],["汉水",109.2,32.4]].forEach(([t,a,b])=>svg.append(sv("text",{x:px(a),y:py(b),style:"font-size:11px;fill:var(--muted);font-family:var(--f-serif)"},t)));
+  ROADS.forEach(([a,b])=>{const A=CITIES[a],B=CITIES[b];svg.append(sv("line",{class:"road",x1:px(A[0]),y1:py(A[1]),x2:px(B[0]),y2:py(B[1])}))});
+  for(const k in CITIES){
+    const [lon,lat]=CITIES[k],c=S.cities[k],x=px(lon),y=py(lat),r=5+Math.sqrt(c.troops)*3;
+    const g=sv("g",{class:"city"});
+    if(lastChanged.has(k))g.append(sv("circle",{class:"changed",cx:x,cy:y,r:r+5}));
+    g.append(sv("circle",{cx:x,cy:y,r,style:`fill:${FCOL[c.owner]};opacity:.88`}));
+    const here=Object.entries(S.chars).filter(([n,v])=>v.loc===k&&!/阵亡|病故|被杀/.test(v.status)).map(([n])=>n);
+    const info=c.troops+"万"+(here.length?` · ${here.length}人`:""),dir=LABEL_DIR[k];
+    if(dir==="up")g.append(sv("text",{x,y:y-r-5,"text-anchor":"middle"},k+" ",sv("tspan",{class:"tr"},info)));
+    else if(dir==="down")g.append(sv("text",{x,y:y+r+13,"text-anchor":"middle"},k+" ",sv("tspan",{class:"tr"},info)));
+    else if(dir==="left")g.append(sv("text",{x:x-r-3,y:y+4,"text-anchor":"end"},k),sv("text",{class:"tr",x:x-r-3,y:y+16,"text-anchor":"end"},info));
+    else g.append(sv("text",{x:x+r+3,y:y+4},k),sv("text",{class:"tr",x:x+r+3,y:y+16},info));
+    g.append(sv("title",{},`${k}：${c.owner}，驻军${c.troops}万`+(here.length?`；在此：${here.join("、")}`:"")));
+    svg.append(g);
+  }
+  $("map").replaceChildren(svg);
+}
+function relLayout(){
+  const order=FACTIONS.flatMap(f=>CH.filter(c=>(S.chars[c.n].faction||c.f)===f).map(c=>c.n));
+  const pos={},n=order.length,gaps=3,step=(Math.PI*2)/(n+gaps);let a=-Math.PI*0.95,prev=null;
+  order.forEach(name=>{const f=S.chars[name].faction;if(prev&&prev!==f)a+=step;prev=f;pos[name]=[220+165*Math.cos(a),210+165*Math.sin(a),a];a+=step});
+  return pos;
+}
+function renderRel(){
+  const pos=relLayout(),svg=sv("svg",{viewBox:"0 0 440 420",role:"img","aria-label":"人物关系图"});
+  const edges=Object.entries(S.rel).filter(([k,v])=>Math.abs(v)>=30);
+  edges.forEach(([k,v])=>{const [a,b]=k.split("|");if(!pos[a]||!pos[b])return;
+    const on=selected&&(a===selected||b===selected);
+    const [x1,y1]=pos[a],[x2,y2]=pos[b];
+    svg.append(sv("path",{d:`M${x1},${y1} Q220,210 ${x2},${y2}`,fill:"none",style:`stroke:${v>0?"var(--good)":"var(--bad)"};stroke-width:${(Math.abs(v)/30).toFixed(1)};opacity:${selected?(on?.95:.12):.5}`},sv("title",{},`${a}—${b}：${v}`)))});
+  for(const n in pos){const [x,y,a]=pos[n],st=S.chars[n],dead=/阵亡|病故|被杀/.test(st.status);
+    const g=sv("g",{class:"rel-node"+(n===selected?" sel":"")+(dead?" dead":""),tabindex:0,role:"button","aria-label":n,onclick:()=>select(n),onkeydown:e=>{if(e.key==="Enter")select(n)}});
+    g.append(sv("circle",{cx:x,cy:y,r:9,style:`fill:${FCOL[st.faction]};opacity:${dead?.35:1}`}));
+    const out=Math.cos(a)>=0,tx=x+Math.cos(a)*14,ty=y+Math.sin(a)*14+4;
+    g.append(sv("text",{x:tx,y:ty,"text-anchor":Math.abs(Math.cos(a))<.3?"middle":(out?"start":"end")},n));
+    svg.append(g)}
+  $("rel").replaceChildren(svg);
+}
+function select(n){selected=n;renderRel();renderPerson();if(matchMedia("(max-width:900px)").matches)setTab("person")}
+function renderPerson(){
+  const c=CH.find(x=>x.n===selected),st=S.chars[selected];
+  const rels=Object.entries(S.rel).filter(([k])=>k.split("|").includes(selected)).map(([k,v])=>[k.split("|").find(x=>x!==selected),v]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+  $("person").replaceChildren(el("div",{},
+    el("h3",{},selected,el("span",{class:"chip c-"+st.faction},st.faction),selected==="刘禅"?el("span",{class:"chip",style:"background:var(--accent)"},"亮魂"):null),
+    el("div",{class:"meta"},`${age(selected)} 岁 · ${st.role} · ${st.status} · 在${st.loc}`),
+    el("div",{},c.bio),
+    el("div",{class:"label"},"最近的内心盘算"),
+    el("div",{class:"thought"},st.thought||"尚未登场推演。"),
+    st.memory.length?[el("div",{class:"label"},"记在心里的事"),el("ul",{class:"plain"},st.memory.slice(-6).reverse().map(m=>el("li",{},"· "+m)))]:null,
+    st.inbox.length?[el("div",{class:"label"},"待拆的密信"),el("ul",{class:"plain"},st.inbox.map(m=>el("li",{},`${m.from}：${m.content}`)))]:null,
+    el("div",{class:"label"},"人际"),
+    el("ul",{class:"plain"},rels.length?rels.map(([o,v])=>el("li",{class:"rel-row",onclick:()=>select(o)},el("span",{},o),el("b",{class:v>=0?"pos":"neg"},(v>0?"+":"")+v))):el("li",{},"无显著关系")))
+  );
+}
+function actCard(a){
+  return el("div",{class:"act"},
+    el("div",{class:"act-h"},el("b",{onclick:()=>select(a.name)},a.name),el("span",{class:"chip c-"+S.chars[a.name].faction},a.action?.type||"观望"),
+      el("span",{},[a.action?.target,a.action?.detail].filter(Boolean).join("：")||"")),
+    a.thought?el("div",{class:"t"},"〔心〕"+a.thought):null,
+    a.public_speech?el("div",{class:"s"},a.public_speech):null,
+    (a.secret_letters||[]).map(l=>el("div",{class:"letter"},`致${l.to}：${l.content}`)));
+}
+function renderChron(){
+  const blocks=[];
+  if(live){blocks.push(el("div",{class:"turn"},el("h3",{},live.date.main+" · 推演中"),
+    el("div",{class:"acts"},live.agents.map(n=>live.done[n]?actCard(live.done[n]):el("div",{class:"act"},el("div",{class:"act-h"},el("b",{},n),el("span",{class:"thinking"},live.err[n]||"思考中…"))))),
+    live.judging?el("p",{class:"thinking"},"天道裁定中…"):null))}
+  [...S.log].reverse().forEach(t=>{
+    blocks.push(el("div",{class:"turn"},el("h3",{},t.turn===0?"序幕 · "+t.date.main:t.date.main),
+      el("p",{class:"summary"},t.summary),
+      (t.events||[]).map(e=>el("p",{class:"ev"},el("b",{},e.title+"　"),e.text)),
+      t.acts?.length?el("details",{},el("summary",{},`众人心思与行动（${t.acts.length} 人）`),el("div",{class:"acts"},t.acts.map(actCard))):null))});
+  $("chron").replaceChildren(...blocks);
+}
+function setTab(t){document.body.dataset.tab=t;document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tab===t))}
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+
+renderAll();setTab("chron");
+document.getElementById("sub").textContent=`分支：${SIM.branch||"未知"} · 已推演 ${S.turn} 季`+(W.director?` · 下一季天命干预：${W.director}`:"");
+</script>
