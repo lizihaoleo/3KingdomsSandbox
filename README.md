@@ -52,7 +52,7 @@ git switch main
 - 改人物性格或加人物：编辑 `sim/characters/*.json`，新人物要同时加进 `sim/config.json` 的 `order`。
 - 改初始局势：`sim/world.json`（城池归属、驻军、粮草、民心、人物关系值）。
 - 改前提：`sim/config.json` 的 `premise`。
-- 省额度：在 `.claude/agents/character.md` 的开头加一行 `model: sonnet`，让人物用较快的模型，裁判保持默认。
+- 模型分级：`sim/config.json` 的 `major` 列出主要人物，推演时沿用当前会话的模型；其余人物用较快的 sonnet；天道裁判始终用当前会话的模型。增删 `major` 即可调整。
 
 ## 文件
 

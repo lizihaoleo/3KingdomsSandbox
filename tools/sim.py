@@ -3,7 +3,7 @@
 
 子命令：
   status                     当前日期与天下大势
-  pick [--n 上限]            取天道上季点名的登场人物（无则按旧法选 7 人），写入 .work/agents.txt
+  pick [--n 上限]            取天道上季点名的登场人物（无则按旧法选 7 人），写入 .work/agents.txt；输出标注主要/次要人物
   brief 人物 [--out 文件]    生成该人物的私人简报（只含此人能知道的信息）
   judge-brief [--out 文件]   汇总 .work/act-*.json，生成天道裁判简报
   apply                      校验并落地 .work/judge.json，写编年史、更新查看器，清空 .work
@@ -447,7 +447,8 @@ def main():
             os.remove(f)
         ag = S.pick(a.n)
         open(os.path.join(WORK, "agents.txt"), "w", encoding="utf-8").write("\n".join(ag) + "\n")
-        print("\n".join(ag))
+        major = set(S.cfg.get("major") or [])
+        print("\n".join(f"{x}\t{'主要' if x in major else '次要'}" for x in ag))
     elif a.cmd == "brief":
         if a.name not in S.chars: sys.exit(f"没有人物：{a.name}")
         out(S.brief(a.name), a.out)
