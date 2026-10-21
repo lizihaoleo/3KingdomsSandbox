@@ -341,7 +341,7 @@ async function send(cmd){
     if(c==="approval_required"||c==="not_in_manifest")toast("需要先允许本页使用 Claude Code Remote 连接器，再点一次。也可以手动发送：",cmd);
     else if(c==="server_not_connected"||c==="needs_reauth")toast("Claude Code Remote 连接器不可用，请在 claude.ai 设置 → 连接器里检查。也可以手动发送：",cmd);
     else if(c==="tool_error")toast("推演会话没有收下消息，可能已结束。请在新会话里手动发送：",cmd);
-    else toast(`发送结果不确定（${c||"未知错误"}），先别重复点。也可以手动发送：`,cmd)}
+    else toast(`发送结果不确定（${c||"未知错误"}${e&&e.message?"："+String(e.message).slice(0,160):""}），先别重复点。也可以手动发送：`,cmd)}
 }
 function disarm(){clearTimeout(armTimer);if(armed){armed.textContent=armed.dataset.label;armed.classList.remove("armed")}armed=null}
 function act(btn,cmd){
