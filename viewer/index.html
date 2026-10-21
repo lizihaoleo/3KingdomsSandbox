@@ -327,16 +327,16 @@ function copy(cmd){
 }
 /* ---------- 按钮直接推进：经 Claude Code Remote 连接器给推演会话发固定命令 ---------- */
 // 只发白名单里的三条命令；天命干预含自由文字，仍走复制。会话推完后重建并重新发布本页，打开着的页面自动刷新
-const SESSION="session_01R2yYMkrSgmNCYFs5PpAYEW", PAGE_URL="https://claude.ai/artifact/Tse3nhhTeUnCHe32G1ZcTi", CCR="Claude Code Remote";
+// 平台不允许网页直接给会话发消息，按钮改为触发一个绑定在推演会话上的手动任务，附带的文字就是命令
+const SESSION="session_01R2yYMkrSgmNCYFs5PpAYEW", TRIGGER="trig_01DGmvnCaoazsU8qoqSy4CQS", CCR="Claude Code Remote";
 const ALLOWED={"/turn":"确认推演一季？","/turn 4":"确认连推四季？","/outline":"确认整理大纲？"};
 let mcp=null, busy=false, armed=null, armTimer;
 function setBusy(b,label){busy=b;const e=$("sess");e.hidden=false;e.className="sess "+(b?"busy":"idle");e.lastElementChild.textContent=label||(b?"推演会话工作中…":"推演会话待命");
   document.querySelectorAll("[data-cmd]").forEach(x=>x.disabled=b)}
 async function send(cmd){
   if(!(cmd in ALLOWED))return;
-  const msg=`【季汉推演查看器】页面按钮：${cmd}\n按 CLAUDE.md 的流程执行，提交并推送，再运行 python3 tools/sim.py build-viewer，把 viewer/index.html 连同 data.js 重新发布到 ${PAGE_URL}。`;
   setBusy(true,"正在送出…");
-  try{await mcp.callTool(CCR,"send_message",{session_id:SESSION,message:msg});setBusy(true,"已送达，推演会话工作中…");toast("已送往推演会话，推完后本页会自动刷新：",cmd)}
+  try{await mcp.callTool(CCR,"fire_trigger",{trigger_id:TRIGGER,text:cmd});setBusy(true,"已送达，推演会话工作中…");toast("已送往推演会话，推完后本页会自动刷新：",cmd)}
   catch(e){setBusy(false);const c=e&&e.code;
     if(c==="approval_required"||c==="not_in_manifest")toast("需要先允许本页使用 Claude Code Remote 连接器，再点一次。也可以手动发送：",cmd);
     else if(c==="server_not_connected"||c==="needs_reauth")toast("Claude Code Remote 连接器不可用，请在 claude.ai 设置 → 连接器里检查。也可以手动发送：",cmd);

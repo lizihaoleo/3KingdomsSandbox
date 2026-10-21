@@ -9,7 +9,7 @@
 - 状态文件（`sim/`、`chronicle/`、`viewer/data.js`）只通过 `tools/sim.py` 修改，不要手改。用户明确要求修改人物设定或初始局势时除外，改完要提交。
 - 每推完一季提交一次 git。分支就是平行历史。
 - 查看器已发布为私有页面 https://claude.ai/artifact/Tse3nhhTeUnCHe32G1ZcTi 。每次推演或改动后运行 `python3 tools/sim.py build-viewer`，把 `viewer/index.html` 连同 `data.js` 重新发布到这个链接，并推送分支。
-- 页面上的按钮会经 Claude Code Remote 连接器给 `viewer/index.html` 里 `SESSION` 常量指向的会话发消息（以“【季汉推演查看器】页面按钮：”开头，只有 `/turn`、`/turn 4`、`/outline` 三种）。收到时按对应命令执行。换了新会话时，把 `SESSION` 改成新会话的 ID 再发布。
+- 页面上的按钮经 Claude Code Remote 连接器触发 `viewer/index.html` 里 `TRIGGER` 常量指向的手动任务（平台不允许网页直接给会话发消息）。任务绑定在推演会话上，送来的消息以“【季汉推演查看器】页面按钮触发”开头，附带的命令只认 `/turn`、`/turn 4`、`/outline`，按对应命令执行。换了新会话时，新建一个绑定新会话、不设时间的任务，把 `TRIGGER` 和 `SESSION` 改掉再发布。
 
 ## 命令
 
