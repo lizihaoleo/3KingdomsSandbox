@@ -7,7 +7,7 @@
   brief 人物 [--out 文件]    生成该人物的私人简报（只含此人能知道的信息）
   judge-brief [--out 文件]   汇总 .work/act-*.json，生成天道裁判简报
   apply                      校验并落地 .work/judge.json，写编年史、更新查看器，清空 .work
-  direct "干预"              设置下一季的天命干预（空字符串清除）
+  direct "干预" [--public 众人可知的开局] [--cast 甲,乙]  设置下一季的天命干预（空字符串清除）
   thread "标题" "详情" [--actors 甲,乙]  登记一条悬而未决的线索，交天道日后推进或了结
   export [--out 文件]        导出完整推演记录（Markdown）
   build-viewer               重新生成 viewer/data.js
@@ -135,7 +135,8 @@ class Sim:
         cast = [x for x in self.world.get("cast") or [] if x in alive]
         if cast:
             ag = (["刘禅"] if "刘禅" in alive else []) + [x for x in cast if x != "刘禅"]
-            return ag[:n] if n else ag
+            ag = (ag[:n] if n else ag) + [x for x in self.world.get("director_cast") or [] if x in alive and x not in ag]
+            return ag
         n = n or 7
         must = [x for x in ["刘禅", "张皇后", "司马懿", "孙权", "曹叡"] if x in alive]
         mail = [x for x in alive if self.chars[x]["inbox"] and x not in must]
@@ -167,6 +168,7 @@ class Sim:
 
 【近期公开发生的事】
 {self.recent(3, public=not soul)}
+{('【本季开局】' + self.world['director_public']) if self.world.get('director_public') else ''}
 {('【上季众人公开言论】' + chr(10) + speeches) if speeches else ''}
 
 【你私下记得的事】{'；'.join(c['memory'][-8:]) or '无'}
@@ -212,6 +214,7 @@ class Sim:
             blocks.append(f"◆{a['name']}\n内心：{a.get('thought', '')}\n行动：{act.get('type', '观望')}→{act.get('target', '')}：{act.get('detail', '')}\n公开言论：{a.get('public_speech') or '无'}\n密信：{letters}")
         d = self.date()
         director = self.world.get("director", "").strip()
+        END = self.cfg.get("end_turn", 40)
         return f"""你是一场三国架空历史推演的“天道”裁判。前提：{self.cfg['premise']}
 现在是{d['main']}（{d['sub']}）。请裁定这一季（三个月）众人行动的结果。
 
@@ -224,6 +227,8 @@ class Sim:
 5. 各方都按兵不动时，用天灾、叛乱、意外死亡、内奸等外部变数打破僵局；年老者可能病故，但要合理。
 6. 男女主角：男主是刘禅（亮魂），女主是张皇后与黄月英，辛宪英是魏方的对手型女主。每一两季至少安排一场男主与女主的直接互动（对话、冲突、试探或合作），写进 events；女主的行动同样要有实际后果。
 7. 伏笔要回收：优先让已铺垫的线索结出果子，不要只开新坑。
+8. 爽点每季都要有：至少一个让读者拍案的高光时刻，优先给男主刘禅（智斗胜出、当众打脸、以少胜多、反将一军、识破杀局），也可以给女主或蜀方将相。高光要靠众人行动里的谋划挣来，写清因果；同一季对手也可以有自己的胜利，主角照样会挨打。
+9. 节奏要紧凑，大势要推进：这部书要一路写到三国乱世终结（天下一统或格局彻底定型），计划在第{END}季前后收官，现在是第{now}季。每季局面都要有实质变化，不要来回拉锯；越接近收官，越要推动灭国之战、都城易手、君主更替这类决定性事件。乱世真正终结的那一季，在 JSON 里加上 "ending":"终局说明，100字内"，并了结全部线索。
 summary 与 events 用史书或小说的笔法，不要出现“粮40”“民心60”这类数值。
 
 【人物（姓名|势力|年龄|职位|状态|所在｜史实走向，仅供你参考）】
@@ -374,9 +379,13 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             "before": before, "after": self.snapshot(),
             "threads": tlog, "debuts": debuts, "exits": exits, "next_cast": [{"name": n, "why": why.get(n, "")} for n in cast[:12]],
         }
+        if J.get("ending"):
+            entry["ending"] = str(J["ending"]); self.world["ended"] = entry["ending"]
         self.log.append(entry)
         self.write_turn_md(entry)
         self.world["director"] = ""
+        self.world["director_public"] = ""
+        self.world["director_cast"] = []
         self.world["turn"] += 1
         self.world["season"] += 1
         if self.world["season"] > 3:
@@ -390,6 +399,8 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         if t.get("director"):
             L += [f"> 天命干预：{t['director']}", ""]
         L += [t["summary"], ""]
+        if t.get("ending"):
+            L += [f"**终局：** {t['ending']}", ""]
         L += [f"- **{e['title']}**：{e['text']}" for e in t.get("events", [])]
         if t.get("debuts"):
             L += ["", "登场：" + "；".join(f"{d['name']}（{d['why']}）" if d.get("why") else d["name"] for d in t["debuts"])]
@@ -515,7 +526,7 @@ def main():
     x = sp.add_parser("brief"); x.add_argument("name"); x.add_argument("--out")
     x = sp.add_parser("judge-brief"); x.add_argument("--out")
     sp.add_parser("apply")
-    x = sp.add_parser("direct"); x.add_argument("text")
+    x = sp.add_parser("direct"); x.add_argument("text"); x.add_argument("--public", default="", help="开局时众人都知道的部分，写进人物简报"); x.add_argument("--cast", default="", help="本季额外登场的人物，逗号分隔")
     x = sp.add_parser("thread"); x.add_argument("title"); x.add_argument("detail"); x.add_argument("--actors", default=""); x.add_argument("--since", type=int); x.add_argument("--last", type=int)
     x = sp.add_parser("export"); x.add_argument("--out")
     sp.add_parser("build-viewer")
@@ -580,6 +591,8 @@ def main():
         print(f"已登记线索 #{nid}：{a.title}")
     elif a.cmd == "direct":
         S.world["director"] = a.text.strip()
+        S.world["director_public"] = a.public.strip()
+        S.world["director_cast"] = [x for x in re.split(r"[,，、\s]+", a.cast) if x]
         wj(p("sim", "world.json"), S.world); S.build_viewer()
         print("已设置天命干预：" + (S.world["director"] or "（已清除）"))
     elif a.cmd == "export":
