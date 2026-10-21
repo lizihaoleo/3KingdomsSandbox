@@ -184,6 +184,7 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         names = set(self.cfg["order"])
         factions = self.cfg["factions"]
         changed = []
+        before = self.snapshot()
         intercepted = {(x.get("from"), x.get("to")): x.get("by") for x in J.get("intercepted_letters") or [] if isinstance(x, dict)}
         for n in agents:
             self.chars[n]["inbox"] = []
@@ -244,6 +245,7 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             "summary": str(J.get("summary") or "本季无大事。"),
             "events": [{"title": str(e.get("title", "")), "text": str(e.get("text", ""))} for e in (J.get("events") or [])[:8]],
             "director": self.world.get("director", ""), "changed": changed, "acts": acts,
+            "before": before, "after": self.snapshot(),
         }
         self.log.append(entry)
         self.write_turn_md(entry)
@@ -287,18 +289,59 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         L += [f"- {n}｜{c['faction']}｜{self.age(n)}岁｜{c['role']}｜{c['status']}｜在{c['loc']}" for n, c in self.chars.items()]
         return "\n".join(L) + "\n"
 
+    def snapshot(self):
+        return {"cities": {k: {"owner": v["owner"], "troops": v["troops"]} for k, v in self.world["cities"].items()},
+                "factions": json.loads(json.dumps(self.world["factions"]))}
+
+    def branches(self, current):
+        """各本地分支的编年摘要与局势，供查看器对比平行历史。"""
+        import subprocess
+        git = lambda *a: subprocess.run(["git", *a], cwd=ROOT, capture_output=True, text=True)
+        names = [b for b in git("for-each-ref", "--format=%(refname:short)", "refs/heads").stdout.split() if b]
+        if current and current not in names:
+            names.insert(0, current)
+        res = []
+        for b in names:
+            if b == current:
+                log, world, chars = self.log, self.world, self.chars
+            else:
+                try:
+                    log = json.loads(git("show", f"{b}:chronicle/log.json").stdout)
+                    world = json.loads(git("show", f"{b}:sim/world.json").stdout)
+                except ValueError:
+                    continue
+                chars = {}
+                for n in self.cfg["order"]:
+                    try:
+                        chars[n] = json.loads(git("show", f"{b}:sim/characters/{n}.json").stdout)
+                    except ValueError:
+                        pass
+            res.append({
+                "name": b, "current": b == current,
+                "turns": [{"turn": t["turn"], "date": t["date"], "summary": t.get("summary", ""), "director": t.get("director", ""),
+                           "events": [e.get("title", "") for e in t.get("events", [])]} for t in log],
+                "cities": {k: v["owner"] for k, v in world["cities"].items()},
+                "troops": {k: v["troops"] for k, v in world["cities"].items()},
+                "dead": [n for n, c in chars.items() if re.search("阵亡|病故|被杀|赐死|遇害|身故", c.get("status", ""))],
+            })
+        return res
+
     def build_viewer(self):
         try:
             import subprocess
             branch = subprocess.run(["git", "branch", "--show-current"], cwd=ROOT, capture_output=True, text=True).stdout.strip()
         except Exception:
             branch = ""
-        data = {"cfg": self.cfg, "world": self.world, "chars": self.chars, "log": self.log, "date": self.date(), "branch": branch}
+        try:
+            branches = self.branches(branch)
+        except Exception:
+            branches = []
+        data = {"cfg": self.cfg, "world": self.world, "chars": self.chars, "log": self.log, "date": self.date(),
+                "branch": branch, "branches": branches}
         with open(p("viewer", "data.js"), "w", encoding="utf-8") as f:
             f.write("window.SIM = " + json.dumps(data, ensure_ascii=False) + ";\n")
 
 
-# ---------- 校验 ----------
 def load_act(name, path, order):
     try:
         r = rj(path)
