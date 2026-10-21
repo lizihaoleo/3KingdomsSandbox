@@ -598,11 +598,11 @@ function renderChron(){
 
 /* ---------- 悬案 ---------- */
 function renderThreads(){
-  const T=[...(W.threads||[])].sort((a,b)=>a.last-b.last);
-  put($("threads"),el("div",{class:"card-h"},el("h2",{},"悬而未决"),el("span",{},`${T.length} 条 · 天道每季须推进搁置最久的`)),
+  const T=[...(W.threads||[])].sort((a,b)=>(!!a.major-!!b.major)||a.since-b.since);
+  put($("threads"),el("div",{class:"card-h"},el("h2",{},"悬而未决"),el("span",{},`${T.length} 条 · 普通线索 8 季内必须收回`)),
     T.length?el("div",{class:"evs",style:"display:flex;flex-direction:column;gap:10px"},T.map(x=>{const idle=W.turn-x.last;
       return el("div",{},el("div",{style:"display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"},el("b",{style:"font-family:var(--f-serif)"},x.title),
-        el("span",{style:`font-size:12px;color:${idle>=4?"var(--bad)":"var(--muted)"}`},`第${x.since}季起 · ${idle?idle+"季无进展":"本季有进展"}`)),
+        el("span",{style:`font-size:12px;color:${x.major?"var(--gold)":x.since+8-W.turn-1<=2?"var(--bad)":"var(--muted)"}`},x.major?`第${x.since}季起 · 全书主钩子`:`第${x.since}季起 · ${x.since+8-W.turn-1>0?"还剩"+(x.since+8-W.turn-1)+"季":"本季须了结"}`)),
         el("div",{style:"font-size:13px;color:var(--ink-2)"},x.detail))})):el("p",{class:"empty"},"暂无。"));
 }
 

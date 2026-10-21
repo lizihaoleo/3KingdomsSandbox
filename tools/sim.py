@@ -192,9 +192,16 @@ class Sim:
         overdue = "、".join(f"{n}（{sum(1 for m in self.chars[n]['inbox'] if cur - m.get('turn', cur) >= 2)}封）" for n in self.alive()
                             if any(cur - m.get("turn", cur) >= 2 for m in self.chars[n]["inbox"])) or "无"
         now = self.world["turn"] + 1
+        LIMIT = 8
+        def due(x):
+            if x.get("major"):
+                return "全书主钩子，终局前回收"
+            left = x["since"] + LIMIT - now
+            return "已超期，本季必须了结" if left <= 0 else f"还剩{left}季须了结"
         threads = "\n".join(
-            f"#{x['id']} {x['title']}（第{x['since']}季起，已{now - 1 - x['last']}季无进展）：{x['detail']}" + (f"［相关：{'、'.join(x['actors'])}］" if x.get("actors") else "")
-            for x in sorted(self.world.get("threads") or [], key=lambda x: x["last"])) or "无"
+            f"#{x['id']} {x['title']}（第{x['since']}季起，{due(x)}，已{now - 1 - x['last']}季无进展）：{x['detail']}" + (f"［相关：{'、'.join(x['actors'])}］" if x.get("actors") else "")
+            for x in sorted(self.world.get("threads") or [], key=lambda x: (bool(x.get("major")), x["since"]))) or "无"
+        n_major = sum(1 for x in self.world.get("threads") or [] if x.get("major"))
         la = self.last_acted()
         idle = "、".join(f"{n}（{'从未' if n not in la else f'{now - 1 - la[n]}季'}）" for n in self.alive()
                          if now - 1 - la.get(n, 0) >= 4) or "无"
@@ -242,7 +249,9 @@ summary 与 events 用史书或小说的笔法，不要出现“粮40”“民�
 - 候场人物到了史载的时候，或剧情需要时，用 debuts 安排登场（同样可让“退场”者重新登场）。剧情暂时不需要、但仍在世的人，在 character_changes 里把状态设为“退场”；死亡用相应状态。
 【悬而未决的线索】（按搁置时间排序，最久的在前）
 {threads}
-- 每季必须推进或了结至少两条搁置最久的线索：可以写成背景事件放进 events，给出下文；已搁置 4 季以上的，本季必须有下文或了结。用 threads.update 记进展，threads.close 了结并写明结局。
+- 伏笔要按时回收，读者才不会迷惑：普通线索从开出到了结不得超过 8 季；“还剩 2 季”以内的要推向结局，“已超期”的本季必须了结，并写明结局。每季至少了结一条，同时开出的新线索不得多于了结的数量加一。
+- 只有全书级的重大反转或主钩子（如亮魂身份最终如何揭晓）可以登记为 major，长期保留，目前已有 {n_major} 条，全书最多 3 条；它们也要在全书高潮时回收，不能不了了之。已有线索可在 update 里加 "major": true 升格。
+- 已搁置 4 季以上没有进展的，本季必须有下文。用 threads.update 记进展，threads.close 了结并写明结局。
 - 本季新出现、但三个月内办不完的事（请命未批、叛乱未平、密谋未发、承诺未兑现等），用 threads.open 登记，免得日后被遗忘。
 - 久未亲自思考的人物（4 季以上）：{idle}。他们的处境同样在变化，可在背景中交代，必要时点名登场。
 
@@ -250,7 +259,7 @@ summary 与 events 用史书或小说的笔法，不要出现“粮40”“民�
 - 密信积压两季以上未拆的：{overdue}。本季要么点名让收信人登场，要么在背景中交代他如何处置这些信。
 
 输出一个JSON对象（只写JSON）：
-{{"summary":"本季大事记，史书笔法，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"城名(仅限已有城池：{'、'.join(self.world['cities'])})","owner":"蜀|魏|吴","troops":整数万}}],"faction_changes":[{{"faction":"蜀|魏|吴","food":增减整数,"morale":增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(STATUSES)}","role":"新职位或留空","loc":"所在城池或留空","faction":"若改投他国则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}],"debuts":[{{"name":"候场或退场人物","role":"职位","loc":"所在城池","why":"登场缘由，30字内"}}],"next_cast":[{{"name":"人物","why":"下季为何要他亲自思考，20字内"}}],"threads":{{"open":[{{"title":"十字内","detail":"来龙去脉，80字内","actors":["人物"]}}],"update":[{{"id":编号,"detail":"新进展，60字内"}}],"close":[{{"id":编号,"outcome":"结局，60字内"}}]}}}}
+{{"summary":"本季大事记，史书笔法，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"城名(仅限已有城池：{'、'.join(self.world['cities'])})","owner":"蜀|魏|吴","troops":整数万}}],"faction_changes":[{{"faction":"蜀|魏|吴","food":增减整数,"morale":增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(STATUSES)}","role":"新职位或留空","loc":"所在城池或留空","faction":"若改投他国则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}],"debuts":[{{"name":"候场或退场人物","role":"职位","loc":"所在城池","why":"登场缘由，30字内"}}],"next_cast":[{{"name":"人物","why":"下季为何要他亲自思考，20字内"}}],"threads":{{"open":[{{"title":"十字内","detail":"来龙去脉，80字内","actors":["人物"],"major":false}}],"update":[{{"id":编号,"detail":"新进展，60字内","major":false}}],"close":[{{"id":编号,"outcome":"结局，60字内"}}]}}}}
 events 3-6条；只列出有变化的城池、关系和人物；被截获的密信不会送达收信人，而会被截获者得知。
 """
 
@@ -335,6 +344,8 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         turn = self.world["turn"] + 1
         for u in T.get("update") or []:
             x = live.get(u.get("id")) if isinstance(u, dict) else None
+            if x and u.get("major") is True and sum(1 for y in live.values() if y.get("major")) < 3:
+                x["major"] = True
             if x and u.get("detail"):
                 x["detail"], x["last"] = str(u["detail"])[:120], turn
                 tlog["updated"].append({"id": x["id"], "title": x["title"], "detail": x["detail"]})
@@ -347,6 +358,8 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             if isinstance(o, dict) and o.get("title"):
                 nid = self.add_thread(str(o["title"]), str(o.get("detail") or ""), o.get("actors") or [])
                 self.world["threads"][-1]["since"] = self.world["threads"][-1]["last"] = turn
+                if o.get("major") is True and sum(1 for x in self.world["threads"] if x.get("major")) < 3:
+                    self.world["threads"][-1]["major"] = True
                 tlog["opened"].append({"id": nid, "title": str(o["title"])[:20]})
         for kn in J.get("knowledge") or []:
             if kn.get("name") in self.chars and kn.get("learns"):
