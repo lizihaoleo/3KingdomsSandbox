@@ -87,15 +87,23 @@ class Sim:
     def rk(a, b):
         return f"{a}|{b}" if a < b else f"{b}|{a}"
 
-    def world_brief(self):
+    def world_brief(self, plain=False):
+        """plain=True 给人物看：粮草与民心只用此人会有的说法，不出现抽象数值。"""
         cities = "、".join(f"{k}({c['owner']}{c['troops']}万)" for k, c in self.world["cities"].items())
-        fac = "；".join(f"{f}：粮{v['food']} 民心{v['morale']}" for f, v in self.world["factions"].items())
+        if plain:
+            food = lambda v: "仓廪空虚" if v < 30 else "粮草吃紧" if v < 50 else "粮草尚可" if v < 80 else "仓廪充实" if v < 110 else "积谷如山"
+            mor = lambda v: "人心离散" if v < 40 else "人心浮动" if v < 55 else "人心安定" if v < 70 else "上下归心" if v < 85 else "万众拥戴"
+            fac = "；".join(f"{f}：{food(v['food'])}，{mor(v['morale'])}" for f, v in self.world["factions"].items())
+        else:
+            fac = "；".join(f"{f}：粮{v['food']} 民心{v['morale']}" for f, v in self.world["factions"].items())
         return f"城池：{cities}\n国力：{fac}"
 
-    def recent(self, k=3):
+    def recent(self, k=3, public=False):
+        """public=True 给人物看：序幕的记载换成不含亮魂秘密的公开版本。"""
         parts = []
         for t in self.log[-k:]:
-            s = f"【{t['date']['main']}】{t['summary']}"
+            summ = self.cfg.get("public_premise", t["summary"]) if public and t["turn"] == 0 else t["summary"]
+            s = f"【{t['date']['main']}】{summ}"
             s += "".join(f"\n- {e['title']}：{e['text']}" for e in t.get("events", []))
             parts.append(s)
         return "\n".join(parts)
@@ -141,11 +149,13 @@ class Sim:
         rels = "，".join(f"{[x for x in k.split('|') if x != n][0]}:{v}" for k, v in self.world["rel"].items() if n in k.split("|"))
         last = self.log[-1].get("acts", [])
         speeches = "\n".join(f"{a['name']}公开说：{a['public_speech']}" for a in last if a.get("public_speech"))
-        secret = "（你就是那个被诸葛亮之魂附身的刘禅。）" if n == "刘禅" else "（你并不知道刘禅被附身这件事，除非你在下方记忆或密信中得知，或从他的言行中自己推断。）"
+        soul = n == "刘禅"
+        premise = self.cfg["premise"] if soul else self.cfg.get("public_premise", self.cfg["premise"])
+        secret = "（你就是那个被诸葛亮之魂附身的刘禅。）" if soul else ""
         inbox = "\n".join(f"{m['from']}来信：{m['content']}" for m in c["inbox"]) or "无"
         return f"""你将扮演三国历史人物「{n}」，参与一场多智能体历史推演。其他人物由其他独立的AI扮演，他们看不到你的内心。请完全代入此人的身份、性格、立场与认知局限，深思熟虑后行动。
 
-【推演前提】{self.cfg['premise']}
+【推演前提】{premise}
 {secret}
 
 【当前】{d['main']}（{d['sub']}），第{self.world['turn'] + 1}季，每季约三个月。
@@ -153,10 +163,10 @@ class Sim:
 【性格与处境】{c['persona']}
 
 【天下大势】
-{self.world_brief()}
+{self.world_brief(plain=True)}
 
 【近期公开发生的事】
-{self.recent(3)}
+{self.recent(3, public=not soul)}
 {('【上季众人公开言论】' + chr(10) + speeches) if speeches else ''}
 
 【你私下记得的事】{'；'.join(c['memory'][-8:]) or '无'}
@@ -164,7 +174,7 @@ class Sim:
 {inbox}
 【你对他人的好恶（-100敌视…100亲信）】{rels or '无'}
 
-规则：只依据你这个身份能知道的信息行事；可以说谎、试探、结盟、背叛、拖延，一切以此人真实会有的考量为准。行动要具体可执行，本季只做一件主要的事。人物名必须用以下名单中的：{'、'.join(self.known())}。
+规则：只依据你这个身份能知道的信息行事；想事情、说话都用这个人物在那个年代会用的说法，不要出现“粮40”“民心60”这类数值；可以说谎、试探、结盟、背叛、拖延，一切以此人真实会有的考量为准。行动要具体可执行，本季只做一件主要的事。人物名必须用以下名单中的：{'、'.join(self.known())}。
 
 输出一个JSON对象（只写JSON，不要其他文字）：
 {{"thought":"第一人称内心盘算，150-300字：你如何解读局势、揣测谁在想什么、权衡几种选择、为何选这一步","action":{{"type":"内政|军事|外交|谋略|人事|密信|观望 之一","target":"目标人物/城池/势力","detail":"具体做法，60字内"}},"public_speech":"在朝堂或军中公开说的话，可为空字符串","secret_letters":[{{"to":"人物名","content":"密信内容，80字内"}}],"memory":"本季想记住的要点，30字内"}}
@@ -178,6 +188,9 @@ class Sim:
             f"{n}|{c['faction']}|{self.age(n)}岁|{c['bio']}｜史载约{c['debut']}年登上舞台｜{c.get('hist') or ''}"
             for n in self.cfg["order"] for c in [self.chars[n]] if c["status"] == "未出场") or "无"
         mail = "、".join(f"{n}（{len(self.chars[n]['inbox'])}封）" for n in self.alive() if self.chars[n]["inbox"]) or "无"
+        cur = self.world["turn"]
+        overdue = "、".join(f"{n}（{sum(1 for m in self.chars[n]['inbox'] if cur - m.get('turn', cur) >= 2)}封）" for n in self.alive()
+                            if any(cur - m.get("turn", cur) >= 2 for m in self.chars[n]["inbox"])) or "无"
         now = self.world["turn"] + 1
         threads = "\n".join(
             f"#{x['id']} {x['title']}（第{x['since']}季起，已{now - 1 - x['last']}季无进展）：{x['detail']}" + (f"［相关：{'、'.join(x['actors'])}］" if x.get("actors") else "")
@@ -195,7 +208,15 @@ class Sim:
         return f"""你是一场三国架空历史推演的“天道”裁判。前提：{self.cfg['premise']}
 现在是{d['main']}（{d['sub']}）。请裁定这一季（三个月）众人行动的结果。
 
-要求：依据历史常识、兵力粮草、地理、人物能力与性格判断成败，有因果、有代价、偶有意外，不偏袒任何一方；一季之内不要发生过度剧变（攻城需兵力优势、远征需粮草）；行动之间会相互影响（密信可能被截获、谋略可能被识破）。年老者可能病故，但要合理。未登场人物与无人涉及之地维持现状，也可加入少量合理的背景事件（天灾、羌胡、山越、内乱等）。
+要求：依据历史常识、兵力粮草、地理、人物能力与性格判断成败，有因果、有代价，不偏袒任何一方；行动之间会相互影响（密信可能被截获、谋略可能被识破）。这份记录要写成小说，所以“公正”不等于“温吞”：
+1. 每季至少裁出一场分出胜负的正面冲突（战场、朝堂或谋略），有明确的赢家和代价，不要各自退兵、不了了之。
+2. 每三四季至少一次大转折：城池易手、重要人物死亡、叛变或下狱、秘密险些曝光。距上次大转折已三季以上的，本季就要安排。
+3. 谋划周密又抓住时机的一方，给足回报（大胜而不是小胜）；冒进、失算的一方要付出沉重代价。主角也会挨重拳。
+4. 亮魂身份是全书最大的秘密：每隔几季安排一次真正的险情，让它差点被戳穿，而不只是有人心里起疑。
+5. 各方都按兵不动时，用天灾、叛乱、意外死亡、内奸等外部变数打破僵局；年老者可能病故，但要合理。
+6. 男女主角：男主是刘禅（亮魂），女主是张皇后与黄月英，辛宪英是魏方的对手型女主。每一两季至少安排一场男主与女主的直接互动（对话、冲突、试探或合作），写进 events；女主的行动同样要有实际后果。
+7. 伏笔要回收：优先让已铺垫的线索结出果子，不要只开新坑。
+summary 与 events 用史书或小说的笔法，不要出现“粮40”“民心60”这类数值。
 
 【人物（姓名|势力|年龄|职位|状态|所在｜史实走向，仅供你参考）】
 {chars}
@@ -206,8 +227,8 @@ class Sim:
 【天下大势】
 {self.world_brief()}
 
-【上季回顾】
-{self.recent(1)}
+【近四季回顾】
+{self.recent(4)}
 
 【本季登场人物】{'、'.join(agents)}
 
@@ -225,6 +246,7 @@ class Sim:
 - 久未亲自思考的人物（4 季以上）：{idle}。他们的处境同样在变化，可在背景中交代，必要时点名登场。
 
 - 用 next_cast 点名下一季需要独立思考的人：身处事件中心、刚收到密信、局势骤变、或即将做出关键抉择者，一般 4-9 人；刘禅每季必定登场，无需列出。其余人物下一季照常行事、由你在背景中裁定。目前持有未拆密信者：{mail}
+- 密信积压两季以上未拆的：{overdue}。本季要么点名让收信人登场，要么在背景中交代他如何处置这些信。
 
 输出一个JSON对象（只写JSON）：
 {{"summary":"本季大事记，史书笔法，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"城名(仅限已有城池：{'、'.join(self.world['cities'])})","owner":"蜀|魏|吴","troops":整数万}}],"faction_changes":[{{"faction":"蜀|魏|吴","food":增减整数,"morale":增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(STATUSES)}","role":"新职位或留空","loc":"所在城池或留空","faction":"若改投他国则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}],"debuts":[{{"name":"候场或退场人物","role":"职位","loc":"所在城池","why":"登场缘由，30字内"}}],"next_cast":[{{"name":"人物","why":"下季为何要他亲自思考，20字内"}}],"threads":{{"open":[{{"title":"十字内","detail":"来龙去脉，80字内","actors":["人物"]}}],"update":[{{"id":编号,"detail":"新进展，60字内"}}],"close":[{{"id":编号,"outcome":"结局，60字内"}}]}}}}
@@ -252,7 +274,7 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
                 if by in names:
                     self.chars[by]["memory"].append(f"截获{a['name']}致{l['to']}密信：{l['content']}")
                 else:
-                    self.chars[l["to"]]["inbox"].append({"from": a["name"], "content": l["content"]})
+                    self.chars[l["to"]]["inbox"].append({"from": a["name"], "content": l["content"], "turn": self.world["turn"] + 1})
         for cc in J.get("city_changes") or []:
             k = cc.get("city")
             if k not in self.world["cities"]:
