@@ -1,0 +1,409 @@
+<title>阿斗不扶墙</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+/* 竖排长卷：单栏阅读，章节为条目，人物表在手机上改为卡片 */
+:root{--bg:#f3f4f1;--paper:#fbfbf9;--ink:#1f2523;--muted:#5d6763;--line:#d9ddd8;--accent:#2f6457;--seal:#a8322a;--tag:#e6ece8;
+--display:"Noto Serif SC","Songti SC","STSong",serif;--body:-apple-system,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151a19;--paper:#1c2221;--ink:#e3e7e4;--muted:#9aa5a0;--line:#2f3836;--accent:#7fb8a8;--seal:#e07a6e;--tag:#25302d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#151a19;--paper:#1c2221;--ink:#e3e7e4;--muted:#9aa5a0;--line:#2f3836;--accent:#7fb8a8;--seal:#e07a6e;--tag:#25302d;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:17px/1.85 var(--body);-webkit-text-size-adjust:100%}
+.wrap{max-width:40rem;margin:0 auto;padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.35;margin:0}
+h1{font-size:1.9rem;letter-spacing:.04em}
+h2{font-size:1.3rem;margin-top:2.6rem;padding-bottom:.4rem;border-bottom:1px solid var(--line);scroll-margin-top:64px}
+h3{font-size:1.1rem;margin-top:1.8rem;color:var(--accent)}
+p,ul,ol,blockquote{margin:.7rem 0}
+ul,ol{padding-left:1.3rem}li{margin:.35rem 0}
+blockquote{margin-left:0;padding:.2rem 0 .2rem .9rem;border-left:3px solid var(--line);color:var(--muted);font-size:.9rem}
+strong{color:var(--ink);font-weight:650}
+code{font-size:.85em;background:var(--tag);padding:.05em .35em;border-radius:4px;word-break:break-all}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:.4rem}
+.meta span{font-size:.78rem;background:var(--tag);color:var(--muted);padding:.1rem .55rem;border-radius:999px;letter-spacing:.03em}
+.hit{display:inline-block;font-size:.72rem;line-height:1.5;color:var(--seal);border:1px solid var(--seal);border-radius:4px;padding:0 .35rem;margin-left:.3rem;vertical-align:.12em;white-space:nowrap}
+li.hook{color:var(--muted);font-size:.93rem}
+li.hook::marker{content:"◇ "}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin:1.4rem calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;padding:.5rem max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav a{flex:none;font-size:.85rem;color:var(--accent);text-decoration:none;padding:.2rem .7rem;border:1px solid var(--line);border-radius:999px;background:var(--paper)}
+nav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.cards{display:grid;gap:12px;margin-top:1rem}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:.8rem 1rem;min-width:0}
+.ch{font-family:var(--display);font-size:1.08rem;margin:1.6rem 0 0}
+h3+.ch{margin-top:.8rem}
+.card h4{margin:0 0 .3rem;font-family:var(--display);font-size:1.05rem}
+.card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.25rem .8rem;font-size:.93rem}
+.card dt{color:var(--muted);font-size:.8rem;padding-top:.2rem;letter-spacing:.05em}
+.card dd{margin:0;min-width:0}
+</style>
+<main class="wrap">
+<h1>阿斗不扶墙 · 小说大纲</h1>
+<blockquote>分支 claude/sweet-darwin-vxz7ps（穿越线），序幕到第 40 季全书完结，时间从建安二十四年秋到建兴八年夏（219–230）。依据 <code>outline/推演记录-claude-sweet-darwin-vxz7ps.md</code> 整理，情节走向和人物抉择都照推演来，细节做了戏剧化取舍。第 13 季起，主持人按用户授权每季加一条天命干预，用来制造冲突。诸葛亮魂穿的旧局保存在分支“亮魂线”。</blockquote>
+<nav><a href="#s0">书名与卖点</a><a href="#s1">核心冲突与主题</a><a href="#s2">主要人物与人物弧光</a><a href="#s3">分卷大纲</a><a href="#s4">章节大纲</a><a href="#s5">最值得重点写的场面</a><a href="#s6">伏笔回收</a><a href="#s7">读后评估</a></nav>
+<h2 id="s0">一、书名与卖点</h2>
+<p><strong>书名候选</strong></p>
+<ol>
+<li>《阿斗不扶墙》</li>
+<li>《今是何年》</li>
+<li>《麦城不远》</li>
+</ol>
+<p><strong>一句话卖点</strong>：一个读过三国的现代人，醒来成了十二岁的世子阿斗，离关羽败走麦城只剩两个月，离荆州两千里。他不会打仗，只知道“接下来会发生什么”。他靠这点先知救下了二叔，送走了父亲，用十一年时间让汉家还于旧都。到头来没能救下三叔，他也从此不再“预知”将来。</p>
+<h2 id="s1">二、核心冲突与主题</h2>
+<ul>
+<li><strong>先知是武器，也是罪证</strong>：他知道曹操哪年死、孟达会叛、张飞死在帐下、孙权会被二宫之争耗死，每说中一次，“妖物附体”的说法就多一分凭据。父亲的榻前考校、张裕对质、魏国“易魂”箭书、孙权檄文、孙霸的乳母旧信，一路追到洛阳高庙。</li>
+<li><strong>一个孩子的手伸不了两千里</strong>：前十二季他只是世子，所有的主意都得借丞相、借父王、借关银屏的手送出去，信慢一步，城就丢一座。</li>
+<li><strong>救下的人与没救下的人</strong>：关羽活到终局，刘备没死在白帝而死在汉中，“差了一季，也差了一座城”；张飞躲过第一次行刺，没躲过第二次。</li>
+<li><strong>现代的笨办法</strong>：煮沸、洗手、开窗救了父亲；算码、木牛、换站接力、铜管望远，都要黄月英替他认下来，“越像乡下人自己摸出来的，越没人信”。</li>
+<li><strong>主题</strong>：知道结局的人怎样活在没有结局的日子里。辛宪英问他：“陛下当年醒来问今是何年，如今可知道是何年了？”他答：“建兴八年。再往后的年，朕和你们一样，过一年才知道一年。”</li>
+</ul>
+<h2 id="s2">三、主要人物与人物弧光</h2>
+<div class="cards">
+<div class="card"><h4><strong>刘禅（穿越者）</strong></h4><dl>
+<dt>起点</dt><dd>高烧醒来，问“今是何年”（序幕）</dd>
+<dt>转折</dt><dd>私谒诸葛亮救荆州（第1季）；榻前对父亲说出“梦”（第10季）；即位后学会“先送丞相副署”</dd>
+<dt>结局</dt><dd>洛阳高庙穿上先帝旧衣，当众讲那场高烧；从此不再预知将来（第40季）</dd>
+</dl></div>
+<div class="card"><h4><strong>关羽</strong></h4><dl>
+<dt>起点</dt><dd>围樊城，傲视东吴</dd>
+<dt>转折</dt><dd>听世子信撤围走扬水，内外夹击破吕蒙（第2季）；西陵火峡中箭；“陛下十二岁时就怕我走远”</dd>
+<dt>结局</dt><dd>三取樊城，围宛只施粥；张飞死后入朝当面问天子，听完梦去太庙告祭；终局站在天子身边</dd>
+</dl></div>
+<div class="card"><h4><strong>刘备</strong></h4><dl>
+<dt>起点</dt><dd>汉中王，独召世子夜问（第3季）</dd>
+<dt>转折</dt><dd>称帝；咳血时被“沸水洗手”救回；榻前问“你究竟是什么人”</dd>
+<dt>结局</dt><dd>不去白帝，崩于汉中，托孤丞相（第12季）</dd>
+</dl></div>
+<div class="card"><h4><strong>诸葛亮</strong></h4><dl>
+<dt>起点</dt><dd>被十二岁世子私谒</dd>
+<dt>转折</dt><dd>丞相开府，替天子副署每一道手诏；放俘开门取天水，流言动长安</dd>
+<dt>结局</dt><dd>邺城受司马懿兵符，洛阳修太庙</dd>
+</dl></div>
+<div class="card"><h4><strong>关银屏</strong></h4><dl>
+<dt>起点</dt><dd>江陵渡口擒吴谍（第1季）</dd>
+<dt>转折</dt><dd>识破白衣商船，送陆逊一件白衣（第10季）；油江验船、截信、查船，一个人守住荆州的水路</dd>
+<dt>结局</dt><dd>终局与董允两头查船，查清乳母信的来路</dd>
+</dl></div>
+<div class="card"><h4><strong>黄月英</strong></h4><dl>
+<dt>起点</dt><dd>匠坊替世子画假粮道图（第9季）</dd>
+<dt>转折</dt><dd>认下算码、木牛、铜管全是“黄家家学”；烧掉写着“二宫之争”的草稿，深夜逼问</dd>
+<dt>结局</dt><dd>高庙前夜换掉动了手脚的先帝遗衣</dd>
+</dl></div>
+<div class="card"><h4><strong>辛宪英</strong></h4><dl>
+<dt>起点</dt><dd>随父入蜀吊丧，断定“高烧那夜换了一个人”（第14季）</dd>
+<dt>转折</dt><dd>沔南取证、木牛坊看破；劝司马师别劫狱，当殿要邺城使者先交兵符</dd>
+<dt>结局</dt><dd>洛阳殿上问“如今可知道是何年”，得到回答后放手</dd>
+</dl></div>
+<div class="card"><h4><strong>司马懿</strong></h4><dl>
+<dt>起点</dt><dd>窥阳平、取武都</dd>
+<dt>转折</dt><dd>献匣邀功被夺兵权，下狱、被儿子劫走，据邺称“清君侧”</dd>
+<dt>结局</dt><dd>病榻上把兵符和名册交给丞相，当夜去世（第33季）</dd>
+</dl></div>
+<div class="card"><h4><strong>孙权</strong></h4><dl>
+<dt>起点</dt><dd>白衣渡江的主谋</dd>
+<dt>转折</dt><dd>合肥得而复失、零陵还汉、嫁女、颍水之辱，发檄称汉帝“非刘氏子”</dd>
+<dt>结局</dt><dd>太子孙登先死，他在灵前去世（第37季），应了天子草稿上的那四个字</dd>
+</dl></div>
+<div class="card"><h4><strong>陆逊</strong></h4><dl>
+<dt>起点</dt><dd>夺西陵断峡（第2季）</dd>
+<dt>转折</dt><dd>两次被识破奇袭；谏止西征，封印听查</dd>
+<dt>结局</dt><dd>辅佐幼主孙虑去帝号称藩，把儿子陆抗送去入侍</dd>
+</dl></div>
+<div class="card"><h4><strong>张飞</strong></h4><dl>
+<dt>起点</dt><dd>第一次遇刺未死（第6季）</dd>
+<dt>转折</dt><dd>督江陵、戒酒巡江</dd>
+<dt>结局</dt><dd>第34季被张达、范强刺杀，天子只说了一句“还是没躲过”</dd>
+</dl></div>
+</div>
+<h2 id="s3">四、分卷大纲</h2>
+<p><strong>第一卷 · 麦城（序幕–第4季，219秋–220夏）</strong>：世子私谒丞相，赦糜芳、银屏擒谍，江陵守住；关羽撤樊城走扬水夹击破吴，却丢了西陵；曹操薨，父王夜问；张裕对质。高潮是江陵城东那把火。</p>
+<p><strong>第二卷 · 白帝（第5–12季，220秋–223夏）</strong>：刘备称帝，刘封伏城破孟达；张飞遇刺未死；关羽取襄阳、沮水伏击张郃；沸水侍疾；阆中回銮；刘备崩于汉中。高潮是榻前那句“你究竟是什么人”。</p>
+<p><strong>第三卷 · 易魂（第13–18季，223秋–224冬）</strong>：新帝即位，郊迎刘封；辛宪英入蜀；上庸失而复得；樊城水破又焚仓弃守；曹丕箭书“病后易魂”，太学摆筹破谣。高潮是黄夫人当众认下算码。</p>
+<p><strong>第四卷 · 宛洛（第19–26季，225春–226冬）</strong>：曹丕崩；姜维归汉；吴宫婚约；司马懿被夺兵权；宛城断粮弃守；关中大旱；洛阳兵变，赵云六日入洛。高潮是汉家十二陵前那十三颗人头。</p>
+<p><strong>第五卷 · 三分归一（第27–33季，227春–228秋）</strong>：春荒借米、汝南私约；曹叡崩；司马懿下狱、劫狱、据邺；长安开门；许昌奉玺；河北交割，司马懿托符而逝。高潮是辛宪英那句“请使者把兵符留在殿上”。</p>
+<p><strong>第六卷 · 还都（第34–40季，228冬–230夏）</strong>：孙权亲征，张飞遇刺身死；关羽入朝问梦；吕壹伏诛、孙登病死、孙权灵前而逝；吴去帝号称藩；孙霸据交州作乱；洛阳高庙告祭，乱世终结。高潮是天子穿着父亲的旧衣讲那场高烧。</p>
+<h2 id="s4">五、章节大纲</h2>
+<h3>第一卷 · 麦城</h3>
+<h4 class="ch">第1章 今是何年</h4>
+<div class="meta"><span>建安二十四年秋</span><span>序幕＋第1季</span></div>
+<ul>
+<li>世子高烧醒来，满屋人里他一个也不认得，只问“现在是哪一年”。</li>
+<li>他私谒诸葛亮，说吴人是骄兵之计；汉中王快马严令江陵不得抽兵，又亲笔赦了糜芳失火之罪。</li>
+<li>吕蒙白衣渡江，士仁献公安；糜芳拿到赦书，闭门拒守，关银屏举火示警，吕蒙顿兵江陵城下。<span class="hit">爽点</span></li>
+</ul>
+<h4 class="ch">第2章 扬水夜火</h4>
+<div class="meta"><span>建安二十四年冬</span><span>第2季</span></div>
+<ul>
+<li>关羽接连收到世子和女儿的信，放弃陆路，率舟师走沔水、入扬水，夜抵江陵城东，与糜芳、银屏内外夹击，吕蒙退保公安。（全书第一个大爽点）</li>
+<li>陆逊乘虚袭取西陵，峡口被断，荆益两州从此隔开。</li>
+</ul>
+<h4 class="ch">第3章 父王夜问</h4>
+<div class="meta"><span>建安二十五年春</span><span>第3季</span></div>
+<ul>
+<li>曹操薨。关羽溯江攻西陵，陆逊伪举蜀军火号，诱他入峡，火筏顺流而下，关羽中箭败还。</li>
+<li>世子当殿谏止东征，汉中王答应以公安换回峡口。当夜，父王独召世子：“你怎么知道曹操会死？”</li>
+</ul>
+<h4 class="ch">第4章 张裕对质</h4>
+<div class="meta"><span>延康元年夏</span><span>第4季</span></div>
+<ul>
+<li>术士张裕说世子是妖异附体，拿汉中王的寿数设套。世子不谈天命，只把魏王的头风病情一条条讲给众人听，又跪下替张裕求情。<span class="hit">爽点</span></li>
+<li>江陵定约，换回秭归、西陵；孟达投魏，刘封守住上庸；法正病逝。</li>
+</ul>
+<h3>第二卷 · 白帝</h3>
+<h4 class="ch">第5章 武担称帝</h4>
+<div class="meta"><span>延康元年秋</span><span>第5季</span></div>
+<ul>
+<li>曹丕篡汉，刘备即皇帝位，改元章武，立刘禅为太子。</li>
+<li>太子的密信先到，刘封将计就计，伏兵破孟达前锋。魏廷却从孟达口中问出“太子高烧之后判若两人”。黄忠、吕蒙相继病逝。</li>
+</ul>
+<h4 class="ch">第6章 子午假报</h4>
+<div class="meta"><span>章武元年冬</span><span>第6季</span></div>
+<ul>
+<li>辛宪英放出“魏军春出子午谷”的假军情，试探太子。太子只请丞相做个样子，魏延移兵谷口，大张声势。</li>
+<li>范强谋刺张飞，张达连夜告发，张飞负伤未死。</li>
+</ul>
+<h4 class="ch">第7章 襄阳易帜</h4>
+<div class="meta"><span>章武二年春</span><span>第7季</span></div>
+<ul>
+<li>曹丕三路伐吴，襄樊空虚。关银屏派人扮作盐贩探明伏兵，关羽将计就计，赵云、刘封烧断浮桥，襄阳归汉。<span class="hit">爽点</span></li>
+<li>孟达截获太子写给刘封的私书，皇帝当殿拆信，从此不许太子私通边将。</li>
+</ul>
+<h4 class="ch">第8章 沮水伏骑</h4>
+<div class="meta"><span>章武二年夏</span><span>第8季</span></div>
+<ul>
+<li>皇帝亲自在沮水谷中设伏，大破张郃，武都归汉。<span class="hit">爽点</span></li>
+<li>关羽渡汉水掘堑，被满宠识破，营垒失陷，襄阳被困。士仁在江陵被斩。</li>
+</ul>
+<h4 class="ch">第9章 封匣对质</h4>
+<div class="meta"><span>章武二年秋</span><span>第9季</span></div>
+<ul>
+<li>黄月英与丞相画了一张假粮道图，故意让暗桩抄走，曹仁中计，襄阳解围。<span class="hit">爽点</span></li>
+<li>魏人散布“太子失灵”，董允当众打开封存的书匣对质。吴破合肥，张辽死在城上。</li>
+</ul>
+<h4 class="ch">第10章 沸水侍疾</h4>
+<div class="meta"><span>章武二年冬</span><span>第10季</span></div>
+<ul>
+<li>皇帝在汉中咳血。太子不谈国事，只让人煮沸饮水、开窗通风、侍者洗手，咳血渐止。（全书最暖的一场戏）</li>
+<li>榻前，父亲屏退左右：“你究竟是什么人？”太子跪着讲了高烧那夜的梦。</li>
+<li>吴袭零陵；关银屏派人给陆逊送去一件白衣，偷袭江陵的计划作罢。</li>
+</ul>
+<h4 class="ch">第11章 阆中回銮</h4>
+<div class="meta"><span>章武三年春</span><span>第11季</span></div>
+<ul>
+<li>皇帝执意亲征讨吴，魏国锦商沿江传唱“白帝城头春草生”。太子在榻前跪求，皇帝大笑回銮。<span class="hit">爽点</span></li>
+<li>魏延、赵云焚断渡船，曹仁中箭败归。药童却供出“白帝”二字出自太子之口。</li>
+</ul>
+<h4 class="ch">第12章 汉中托孤</h4>
+<div class="meta"><span>章武三年夏</span><span>第12季</span></div>
+<ul>
+<li>方士榻前考校太子，问陛下寿数；太子以粥饭咳数作答，反问他替谁来问。丞相拿出实据，钱出自刘封府中的旧吏。</li>
+<li>六月，刘备托孤丞相，崩于汉中。梦里的“白帝明春”，差了一季，也差了一座城。</li>
+</ul>
+<h3>第三卷 · 易魂</h3>
+<h4 class="ch">第13章 郊迎焚供</h4>
+<div class="meta"><span>建兴元年秋</span><span>第13季</span></div>
+<ul>
+<li>新帝素服出城十里迎刘封，当廷焚掉供状。<span class="hit">爽点</span></li>
+<li>刘封前脚离城，申仪夜开北门，上庸落入魏手。马超病逝阳平关下。</li>
+</ul>
+<h4 class="ch">第14章 灵前问歌</h4>
+<div class="meta"><span>建兴元年冬</span><span>第14季</span></div>
+<ul>
+<li>辛毗携女入蜀吊丧，当殿揭出吴王密使北上；新帝反问一句，把魏人的离间变成逼吴的筹码，零陵归汉。<span class="hit">爽点</span></li>
+<li>太后内宴上一句“醒来像换了个人，连字都换了一手”，辛宪英记在了心里。</li>
+</ul>
+<h4 class="ch">第15章 两书之择</h4>
+<div class="meta"><span>建兴二年春</span><span>第15季</span></div>
+<ul>
+<li>申仪把魏诏和汉赦并排摆在案上，选了汉家。刘封旧部打开南门，上庸复归。</li>
+<li>曹仁箭创崩裂而死。一页匠坊图稿流到了辛宪英手里。</li>
+</ul>
+<h4 class="ch">第16章 只打一口</h4>
+<div class="meta"><span>建兴二年夏</span><span>第16季</span></div>
+<ul>
+<li>关羽决堤灌樊城，樊城出降；诸将请北追，关羽当众宣读天子手书，收兵筑垒，躲过了汉水退落后的泥淖。<span class="hit">爽点</span></li>
+<li>《沔南算例》颁行，邺城图稿上的怪符成了账房的寻常记数，辛宪英却从颁行的时机看出了破绽。</li>
+</ul>
+<h4 class="ch">第17章 焚仓弃城</h4>
+<div class="meta"><span>建兴二年秋</span><span>第17季</span></div>
+<ul>
+<li>曹丕亲征，关羽守樊城四十七天，奉诏夜焚粮仓渡江，魏军冲进空城，死伤三千。</li>
+<li>曹丕怒发箭书，说汉帝“病后易魂”。辛宪英到沔南取得黄家塾师的证词。</li>
+</ul>
+<h4 class="ch">第18章 太学摆筹</h4>
+<div class="meta"><span>建兴二年冬</span><span>第18季</span></div>
+<ul>
+<li>黄夫人在太学当众认下算码，天子摆筹讲解，让仓曹学徒和太学生比赛算账，易魂之说成了笑谈。<span class="hit">爽点</span></li>
+<li>关银屏放风换锁，截住糜芳的回信，糜芳下狱。宛城南门崩塌，曹丕咳血。</li>
+</ul>
+<h3>第四卷 · 宛洛</h3>
+<h4 class="ch">第19章 许昌秘丧</h4>
+<div class="meta"><span>建兴三年春</span><span>第19季</span></div>
+<ul>
+<li>曹丕崩。魏延招降氐王，武都一战而下；天水中郎姜维在祁山伏击汉军前锋。</li>
+<li>糜芳论罪当斩，糜竺当堂拆开天子四封劝慰信，伏地痛哭，糜芳减死流放。</li>
+</ul>
+<h4 class="ch">第20章 放俘开门</h4>
+<div class="meta"><span>建兴三年夏</span><span>第20季</span></div>
+<ul>
+<li>马遵要在城头斩姜母。天子先前请丞相放还的祁山俘虏里有百余名天水郡兵，他们当夜打开西门，把老夫人送出城。<span class="hit">爽点</span></li>
+<li>姜维见到丞相的第一句话：“丞相的信，差点要了家母的命。”</li>
+</ul>
+<h4 class="ch">第21章 祁山水营</h4>
+<div class="meta"><span>建兴三年秋</span><span>第21季</span></div>
+<ul>
+<li>张郃想断魏延的水源，营寨却跨溪而立，营中新挖了十几口井。姜维陇山焚粮，张郃退兵，阴平易帜。</li>
+<li>关羽楼船撞城，樊城开门。（注：推演里曹仁已于第15季病死，此处守将宜改为曹仁旧部。）</li>
+</ul>
+<h4 class="ch">第22章 漏了司隶</h4>
+<div class="meta"><span>建兴三年冬</span><span>第22季</span></div>
+<ul>
+<li>吴国请婚，并呈瓜分魏地的约书。天子一眼看出约书独独漏了司隶：“是忘了，还是留着日后再争？”<span class="hit">爽点</span></li>
+<li>孙权以公安为聘。宫中拿获盗抄御笔的小黄门，《禅授录》流入市井。</li>
+</ul>
+<h4 class="ch">第23章 殿驳谶录</h4>
+<div class="meta"><span>建兴四年春</span><span>第23季</span></div>
+<ul>
+<li>司马懿被夺兵权。关羽烧宛城屯田，吴破合肥。</li>
+<li>关银屏在送亲船队乳母的箱中搜出批注过的《禅授录》，天子当殿逐句驳倒。<span class="hit">爽点</span></li>
+</ul>
+<h4 class="ch">第24章 合卺问寿</h4>
+<div class="meta"><span>建兴四年夏</span><span>第24季</span></div>
+<ul>
+<li>赵云方城截粮，宛城弃守归汉，关羽在城下施粥。</li>
+<li>大婚筵上，十二岁的孙鲁班当众问：“听说陛下能知人寿数，我父……”天子一语化解。<span class="hit">爽点</span>辛宪英在木牛坊看出破绽，脱身北返。</li>
+</ul>
+<h4 class="ch">第25章 油江验船</h4>
+<div class="meta"><span>建兴四年秋</span><span>第25季</span></div>
+<ul>
+<li>关中旱蝗，丞相设粥棚收流民三万。寿春失守，淮南全归吴。</li>
+<li>潘璋部曲扮成送粮船偷袭公安水门，关银屏照天子的规矩在江口外开舱验船，当场识破。<span class="hit">爽点</span></li>
+</ul>
+<h4 class="ch">第26章 六日入洛</h4>
+<div class="meta"><span>建兴四年冬</span><span>第26季</span></div>
+<ul>
+<li>洛阳禁军哗变，魏帝出奔。赵云三千轻骑六天进入洛阳，先封十二陵，再斩十三个抢掠的乱兵。（全书最大的战场爽点）</li>
+<li>谷水夜战击退司马懿；五丈原守军投汉。</li>
+</ul>
+<h3>第五卷 · 三分归一</h3>
+<h4 class="ch">第27章 借米救城</h4>
+<div class="meta"><span>建兴五年春</span><span>第27季</span></div>
+<ul>
+<li>洛阳春荒，关银屏先开公安仓北运，再收吴米补仓。魏谍散布“汉帝卖汝南换米”，被洛阳父老驳了回去。</li>
+<li>丞相渭水虚张，陇西开城。</li>
+</ul>
+<h4 class="ch">第28章 一纸抄本</h4>
+<div class="meta"><span>建兴五年夏</span><span>第28季</span></div>
+<ul>
+<li>曹叡崩。赵云把谷水截下的司马懿密信抄本经商旅送进曹爽府中，“愿备顾命之列”一句与司马懿的自陈对不上，司马懿下狱。（智斗爽点）</li>
+<li>武威举郡归汉。</li>
+</ul>
+<h4 class="ch">第29章 廷尉劫狱</h4>
+<div class="meta"><span>建兴五年秋</span><span>第29季</span></div>
+<ul>
+<li>辛宪英劝司马师别劫狱，他不听，劫父北走邺城。司马懿斩吴使，称“清君侧”，魏国一分为二。</li>
+<li>曹爽派人收捕司马氏旧部家眷，正应了汉帝事先放出的话，长安诸将夜开宣平门迎丞相。<span class="hit">爽点</span></li>
+</ul>
+<h4 class="ch">第30章 黎阳冰河</h4>
+<div class="meta"><span>建兴五年冬</span><span>第30季</span></div>
+<ul>
+<li>曹爽北伐，在黎阳冰河上大败。朱然想“迎魏帝南巡”，被关羽铁索横江截在颍水。</li>
+<li>天子当殿问诸葛瑾：“吴军为什么不往邺城去？”</li>
+</ul>
+<h4 class="ch">第31章 许昌奉玺</h4>
+<div class="meta"><span>建兴六年春</span><span>第31季</span></div>
+<ul>
+<li>辛宪英隔帘请邺城使者先交兵符，使者拿不出来；天子诏书许曹芳封陈留王，比魏人自己开的条件还宽，许昌奉玺归汉。<span class="hit">爽点</span></li>
+<li>朱然夜袭许昌南门，徐晃力战而死。</li>
+</ul>
+<h4 class="ch">第32章 坊中窃页</h4>
+<div class="meta"><span>建兴六年夏</span><span>第32季</span></div>
+<ul>
+<li>司马懿蓟城破胡，送司马昭入长安为质。</li>
+<li>吴公主的侍女潜入木牛坊偷取册页，被黄月英的暗记识破，但一份抄本已经南下。</li>
+</ul>
+<h4 class="ch">第33章 子龙作证</h4>
+<div class="meta"><span>建兴六年秋</span><span>第33季</span></div>
+<ul>
+<li>孙权发檄称汉帝“非刘氏子”。赵云从邺城来信：“当年在长坂，臣亲眼看见陛下左脚底有三颗黑痣。”<span class="hit">爽点</span></li>
+<li>司马懿把兵符和名册交给丞相，当夜去世。黄月英献上铜管；陆逊照抄本也造出一具，两岸隔江对望。</li>
+</ul>
+<h3>第六卷 · 还都</h3>
+<h4 class="ch">第34章 还是没躲过</h4>
+<div class="meta"><span>建兴六年冬</span><span>第34季</span></div>
+<ul>
+<li>孙权亲征，天子不救荆州，转攻吴人后方：司马师下邳、关平汝南，孙权撤兵。</li>
+<li>十二月雪夜，张达、范强刺杀张飞。廖化握着钥匙不开门，凶手被擒，张飞却已经死了。天子攥着弩机低声说：“还是没躲过。”（全书最痛的一场戏）</li>
+</ul>
+<h4 class="ch">第35章 君臣夜话</h4>
+<div class="meta"><span>建兴七年春</span><span>第35季</span></div>
+<ul>
+<li>天子当殿三问吴国牙将，揭穿他是替死鬼，买凶的是校事吕壹。<span class="hit">爽点</span></li>
+<li>关羽入朝，天子讲了那个梦：“梦见二叔死在麦城，三叔死在帐下。”关羽沉默良久：“臣还活着，翼德没有。”随后去太庙告祭先帝。</li>
+</ul>
+<h4 class="ch">第36章 寿春斩壹</h4>
+<div class="meta"><span>建兴七年夏</span><span>第36季</span></div>
+<ul>
+<li>孙权斩吕壹，只肯割江北各县；天子说：“吴王写的是‘庐江’两个字，没有写‘江北’。”<span class="hit">爽点</span></li>
+<li>方士劝太后在太庙给天子验魂，关银屏顺着木符查出的供词及时送到。孙登病死。</li>
+</ul>
+<h4 class="ch">第37章 灵前而逝</h4>
+<div class="meta"><span>建兴七年秋</span><span>第37季</span></div>
+<ul>
+<li>孙鲁班回建业，带去天子的话“江上不动一兵”。孙权在孙登灵前去世，孙虑继位，陆逊辅政。辽东襄平归汉。</li>
+<li>黄月英在一页草稿上看到“二宫之争”“愤恚而死”，比江东的消息还早半个月。她当场烧了这页纸。</li>
+</ul>
+<h4 class="ch">第38章 夜问纸角</h4>
+<div class="meta"><span>建兴七年冬</span><span>第38季</span></div>
+<ul>
+<li>黄月英带着那页纸烧剩的一角深夜入宫。天子没有讲梦，只把见过他字迹、听过他梦话的人一个个说出来。</li>
+<li>吴国随员当殿告汉帝用巫蛊咒死吴王，天子拿出吕壹金账对质，诸葛瑾当众说先主是哭儿子哭死的。<span class="hit">爽点</span></li>
+</ul>
+<h4 class="ch">第39章 建业定藩</h4>
+<div class="meta"><span>建兴八年春</span><span>第39季</span></div>
+<ul>
+<li>孙霸据交州称王，骂陆逊卖国；廖化擒获孙霸的使者，搜出他私卖长沙的书信。<span class="hit">爽点</span></li>
+<li>陆逊把儿子陆抗牵到殿上：“说陆某卖国，陆某先把亲生儿子送去成都。”吴去帝号，奉汉正朔。</li>
+<li>乳母旧信流入交州：世子醒来认不出乳母，问“现在是哪一年”。</li>
+</ul>
+<h4 class="ch">第40章 高庙旧衣</h4>
+<div class="meta"><span>建兴八年夏</span><span>第40季</span><span>终章</span></div>
+<ul>
+<li>洛阳高庙告祭，交州使节的随从当众宣读檄文，方士捧出先帝遗衣，说妖物盖上就会现形。黄月英早已换掉衬里缝了硝磺粉的那件。</li>
+<li>天子穿上父亲的旧衣，当着各国使者讲了十二岁那场高烧：醒来认不出人，问今年是哪一年，说的话谁也听不懂。太后作证，关羽站在他身边。（全书高潮）</li>
+<li>辛宪英最后一问：“陛下如今可知道是何年了？”“建兴八年。再往后的年，朕和你们一样，过一年才知道一年。”</li>
+<li>尾声：孙霸自尽，交趾归汉；赵云把兵符封好送往洛阳，当夜病逝。四海同奉一个年号，乱世终结。</li>
+</ul>
+<h2 id="s5">六、最值得重点写的场面</h2>
+<ol>
+<li><strong>扬水夜火</strong>（第2季）：一个孩子的两封信改了关羽的路线，麦城之死就此改写。</li>
+<li><strong>沸水侍疾、榻前问梦</strong>（第10季）：现代常识救了父亲，父子之间那一问一跪。</li>
+<li><strong>六日入洛</strong>（第26季）：赵云先封陵、后斩乱兵，汉军回到旧都。</li>
+<li><strong>还是没躲过</strong>（第34季）：先知救了二叔，没救下三叔。</li>
+<li><strong>君臣夜话</strong>（第35季）：关羽听完那个梦，没有追问，转身去了太庙。</li>
+<li><strong>高庙旧衣</strong>（第40季）：天子穿着父亲的衣服，承认自己曾是一个谁也听不懂的病孩子。</li>
+</ol>
+<h2 id="s6">七、伏笔回收</h2>
+<ul>
+<li><strong>世子来历之谜</strong>：序幕“今是何年”→ 父王夜问（第3季）→ 张裕对质（第4季）→ 榻前问梦（第10季）→ 太后“换了一手字”（第14季）→ “易魂”箭书（第17季）→ 算码、木牛、铜管 → 孙权檄文（第33季）→ 关羽问梦（第35季）→ 乳母旧信（第39季）→ 高庙自陈（第40季），首尾都落在同一句“今是何年”上。</li>
+<li><strong>白帝</strong>：太子把刘备死在白帝说漏了嘴（第10、11季），刘备最后不去白帝，崩于汉中。</li>
+<li><strong>张飞之死</strong>：第6季躲过范强行刺，第34季仍死于张达、范强之手，历史的惯性。</li>
+<li><strong>二宫之争</strong>：天子草稿上的四个字（第37季），孙权果然在儿子灵前去世。</li>
+<li><strong>辛宪英</strong>：第6季放假军情，第14季入蜀，第17季沔南取证，第24季木牛坊看破，第40季那一问之后放手。</li>
+</ul>
+<h2 id="s7">八、读后评估</h2>
+<p><strong>做得好的</strong></p>
+<ul>
+<li>开局抓人：两个月、两千里、一个孩子，关羽的命悬在几封信上，前两季节奏极紧。</li>
+<li>主角的高光大多是“知道”，而不是“打”，而每一次“知道”都给“妖物附体”添一分证据，爽点和危机绑在一起。</li>
+<li>身份线收得干净：没有摊牌穿越，而是让他承认自己是个“病过一场、说过胡话的孩子”，从此不再预知。</li>
+</ul>
+<p><strong>还可以更好</strong></p>
+<ul>
+<li>推演中有两处前后矛盾需要修：曹仁在第15季已病死，第21季又“中流矢身亡”；申仪第15季战死，第21季又有“申仪诈质”。写作时第21季守将改为曹仁旧部，诈质者改为申仪余党。</li>
+<li>第13–18季在荆北樊城一线拉锯较久，第19季后才真正提速，写作时可以压缩中段。</li>
+<li>汉家存粮从第20季起长期在两位数低位，裁判对断粮的惩罚偏轻，可以补一场真正的饥荒危机。</li>
+<li>第13季起每季都有主持人干预，后半程的魏室崩解（曹丕、曹叡相继早逝，洛阳兵变）有安排的痕迹，写作时要补足因果。</li>
+</ul>
+</main>
