@@ -21,7 +21,7 @@ WORK = os.path.join(ROOT, ".work")
 SEASONS = "春夏秋冬"
 PACES = {"月": 31, "旬": 10, "周": 7}  # 按月计时时每回的步长（天）
 MAX_SLOW = 2  # 按旬或按周最多连续几回
-COOLDOWN = 2  # 放慢到上限后至少按月几回
+COOLDOWN = 3  # 放慢到上限后至少按月几回
 MONTHS = ["", "一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"]
 DEAD = re.compile("阵亡|病故|被杀|赐死|遇害|自尽|牺牲|处决|遇刺")
 OFFSTAGE = ("未出场", "退场")  # 未出场：候场人物，到时由天道安排登场；退场：仍在世但剧情暂不需要
@@ -479,7 +479,8 @@ events 3-6条；只列出有变化的{L['city']}、关系和人物；被截获�
         self.world["director_cast"] = []
         self.world["turn"] += 1
         if self.monthly:
-            _, b = self.span()
+            a, b = self.span()
+            full = self.world.get("pace", "月") == "月" and a == 1  # 只有完整的一个月才算冷却
             if b >= calendar.monthrange(self.world["year"], self.world["month"])[1]:
                 self.world["day"] = 1
                 self.world["month"] += 1
@@ -491,7 +492,7 @@ events 3-6条；只列出有变化的{L['city']}、关系和人物；被截获�
             cool = self.world.get("cool", 0)
             if J.get("next_pace") in PACES and (J["next_pace"] == "月" or cool <= 0):
                 self.world["pace"] = J["next_pace"]
-            self.world["cool"] = max(0, cool - 1)
+            self.world["cool"] = max(0, cool - 1) if full else cool
             self.world["slow"] = self.world.get("slow", 0) + 1 if self.world.get("pace", "月") != "月" else 0
             if self.world["slow"] > MAX_SLOW:
                 self.world["pace"], self.world["slow"], self.world["cool"] = "月", 0, COOLDOWN
