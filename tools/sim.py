@@ -9,15 +9,17 @@
   judge-brief [--out 文件]   汇总 .work/act-*.json，生成天道裁判简报
   apply                      校验并落地 .work/judge.json，写编年史、更新查看器，清空 .work
   direct "干预" [--public 众人可知的开局] [--cast 甲,乙]  设置下一季的天命干预（空字符串清除）
+  pace 月|旬|周               按月计时的线：设置下一回起每回跨多久（天道也可在裁定里用 next_pace 调）
   thread "标题" "详情" [--actors 甲,乙]  登记一条悬而未决的线索，交天道日后推进或了结
   export [--out 文件]        导出完整推演记录（Markdown）
   build-viewer               重新生成 viewer/data.js
 """
-import argparse, glob, json, os, random, re, shutil, sys
+import argparse, calendar, glob, json, os, random, re, shutil, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(ROOT, ".work")
 SEASONS = "春夏秋冬"
+PACES = {"月": 31, "旬": 10, "周": 7}  # 按月计时时每回的步长（天）
 MONTHS = ["", "一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"]
 DEAD = re.compile("阵亡|病故|被杀|赐死|遇害|自尽|牺牲|处决|遇刺")
 OFFSTAGE = ("未出场", "退场")  # 未出场：候场人物，到时由天道安排登场；退场：仍在世但剧情暂不需要
@@ -75,12 +77,41 @@ class Sim:
         self.action_types = self.cfg.get("action_types") or ACTION_TYPES
 
     # ---------- 工具 ----------
+    def span(self):
+        """按月计时时本回覆盖的日子：(起日, 止日)。步长由 world.pace 决定：月、旬、周；月底剩不足四天并入本回。"""
+        y, m, d = self.world["year"], self.world["month"], self.world.get("day", 1)
+        last = calendar.monthrange(y, m)[1]
+        pace = self.world.get("pace", "月")
+        end = last if pace == "月" else d + PACES[pace] - 1
+        return d, (last if end >= last - 3 else end)
+
+    def span_text(self):
+        """本回时长的说法，如“一周”“一个月”。"""
+        if not self.monthly:
+            return self.L["span"]
+        a, b = self.span()
+        if self.world.get("pace", "月") == "月":
+            return "一个月" if a == 1 else "这个月余下的日子"
+        return {7: "一周", 10: "十天"}.get(b - a + 1, f"{b - a + 1}天")
+
     def date(self, y=None, s=None):
         y = self.world["year"] if y is None else y
         era = self.world.get("era") or self.cfg["era"]
         if self.monthly:
-            s = self.world["month"] if s is None else s
-            tick = MONTHS[s]
+            m = self.world["month"]
+            a, b = self.span()
+            last = calendar.monthrange(y, m)[1]
+            pace = self.world.get("pace", "月")
+            if a == 1 and b == last:
+                tick = MONTHS[m]
+            elif pace == "周" and a in (1, 8, 15, 22):
+                tick = f"{MONTHS[m]}第{cn(a // 7 + 1)}周"
+            elif pace == "旬" and a in (1, 11, 21):
+                tick = MONTHS[m] + "上中下"[a // 10] + "旬"
+            else:
+                tick = f"{MONTHS[m]}{cn(a)}日至{cn(b)}日"
+            return {"main": f"{era['name']}{'元' if y - era['base'] == 1 else cn(y - era['base'])}年 · {tick}", "sub": f"公元 {y} 年",
+                    "range": f"{y}年{m}月{a}日至{m}月{b}日", "key": f"{y}-{m:02d}-{a:02d}"}
         else:
             s = self.world["season"] if s is None else s
             tick = SEASONS[s]
@@ -196,7 +227,7 @@ class Sim:
 【推演前提】{premise}
 {secret}
 
-【当前】{d['main']}（{d['sub']}），第{self.world['turn'] + 1}{L['unit']}，每{L['unit']}约{L['span']}。
+【当前】{d['main']}（{d.get('range') or d['sub']}），第{self.world['turn'] + 1}{L['unit']}，本{L['unit']}约{self.span_text()}。
 【你的身份】{n}，{self.age(n)}岁，{c['faction']}，{c['role']}，状态：{c['status']}，所在：{c['loc']}。{c['bio']}
 【性格与处境】{c['persona']}
 
@@ -262,8 +293,10 @@ class Sim:
         highlight = fill(R.get("highlight") or f"8. 爽点每{U}都要有：至少一个让读者拍案的高光时刻，优先给男主{self.cfg['leads']['male']}。高光要靠众人行动里的谋划挣来，写清因果；同一{U}对手也可以有自己的胜利，主角照样会挨打。")
         pace = fill(R.get("pace") or "")
         owners = "|".join(self.cfg["factions"])
+        pace_note = "" if not self.monthly else f"""
+本{U}按{self.world.get('pace', '月')}推进。时间的快慢由你掌握：平时一{U}一个月；遇到关键时刻（审讯、刺杀前夜、出逃、接头、身份将要暴露），在 JSON 里加 "next_pace":"周"（或"旬"），把下一{U}放慢，让人物之间的试探一来一回写细；事情了结后加 "next_pace":"月" 恢复。不写则保持现在的步长。史实时间表上的日子落在哪一{U}，就在哪一{U}发生。"""
         return f"""你是一场{L['genre']}的“天道”裁判。前提：{self.cfg['premise']}
-现在是{d['main']}（{d['sub']}）。请裁定这一{U}（{L['span']}）众人行动的结果。
+现在是{d['main']}（{d.get('range') or d['sub']}）。请裁定这一{U}（{self.span_text()}）众人行动的结果。{pace_note}
 
 要求：依据{R.get('basis', '历史常识、兵力粮草、地理、人物能力与性格')}判断成败，有因果、有代价，不偏袒任何一方；行动之间会相互影响（密信可能被截获、谋略可能被识破）。这份记录要写成小说，所以“公正”不等于“温吞”：
 1. 每{U}至少裁出一场分出胜负的正面冲突，有明确的赢家和代价，不要各自退缩、不了了之。
@@ -303,7 +336,7 @@ summary 与 events 用史书或小说的笔法，不要出现“{L['food']}40”
 - 伏笔要按时回收，读者才不会迷惑：普通线索从开出到了结不得超过 8 {U}；“还剩 2 {U}”以内的要推向结局，“已超期”的本{U}必须了结，并写明结局。每{U}至少了结一条，同时开出的新线索不得多于了结的数量加一。
 - 只有全书级的重大反转或主钩子（如{R['hook']}）可以登记为 major，长期保留，目前已有 {n_major} 条，全书最多 3 条；它们也要在全书高潮时回收，不能不了了之。已有线索可在 update 里加 "major": true 升格。
 - 已搁置 4 {U}以上没有进展的，本{U}必须有下文。用 threads.update 记进展，threads.close 了结并写明结局。
-- 本{U}新出现、但{L['span']}内办不完的事（请示未批、审查未结、密谋未发、承诺未兑现等），用 threads.open 登记，免得日后被遗忘。
+- 本{U}新出现、但{self.span_text()}内办不完的事（请示未批、审查未结、密谋未发、承诺未兑现等），用 threads.open 登记，免得日后被遗忘。
 - 久未亲自思考的人物（4 {U}以上）：{idle}。他们的处境同样在变化，可在背景中交代，必要时点名登场。
 
 - 用 next_cast 点名下一{U}需要独立思考的人：身处事件中心、刚收到密信、局势骤变、或即将做出关键抉择者，一般 4-9 人；{leads}每{U}必定登场，无需列出。其余人物下一{U}照常行事、由你在背景中裁定。目前持有未拆密信者：{mail}
@@ -436,9 +469,16 @@ events 3-6条；只列出有变化的{L['city']}、关系和人物；被截获�
         self.world["director_cast"] = []
         self.world["turn"] += 1
         if self.monthly:
-            self.world["month"] += 1
-            if self.world["month"] > 12:
-                self.world["month"] = 1; self.world["year"] += 1
+            _, b = self.span()
+            if b >= calendar.monthrange(self.world["year"], self.world["month"])[1]:
+                self.world["day"] = 1
+                self.world["month"] += 1
+                if self.world["month"] > 12:
+                    self.world["month"] = 1; self.world["year"] += 1
+            else:
+                self.world["day"] = b + 1
+            if J.get("next_pace") in PACES:
+                self.world["pace"] = J["next_pace"]
         else:
             self.world["season"] += 1
             if self.world["season"] > 3:
@@ -484,7 +524,7 @@ events 3-6条；只列出有变化的{L['city']}、关系和人物；被截获�
         y = t['date']['sub'].replace('公元 ', '').replace(' 年', '')
         tick = t['date']['main'].split(" · ")[-1]
         tick = f"-{MONTHS.index(tick):02d}" if tick in MONTHS else tick
-        fn = p("chronicle", f"{t['turn']:04d}-{y}{tick}.md")
+        fn = p("chronicle", f"{t['turn']:04d}-{t['date']['key'] if t['date'].get('key') else y + tick}.md")
         with open(fn, "w", encoding="utf-8") as f:
             f.write(self.turn_md(t))
 
@@ -586,6 +626,7 @@ def main():
     x = sp.add_parser("judge-brief"); x.add_argument("--out")
     sp.add_parser("apply")
     x = sp.add_parser("direct"); x.add_argument("text"); x.add_argument("--public", default="", help="开局时众人都知道的部分，写进人物简报"); x.add_argument("--cast", default="", help="本季额外登场的人物，逗号分隔")
+    x = sp.add_parser("pace"); x.add_argument("step", choices=list(PACES), help="下一回起每回跨多久：月、旬、周")
     x = sp.add_parser("thread"); x.add_argument("title"); x.add_argument("detail"); x.add_argument("--actors", default=""); x.add_argument("--since", type=int); x.add_argument("--last", type=int)
     x = sp.add_parser("export"); x.add_argument("--out")
     sp.add_parser("build-viewer")
@@ -595,7 +636,7 @@ def main():
     if a.cmd == "status":
         d = S.date()
         U = S.L["unit"]
-        print(f"第 {S.world['turn']} {U}已完成；下一{U}：{d['main']}（{d['sub']}）")
+        print(f"第 {S.world['turn']} {U}已完成；下一{U}：{d['main']}（{d.get('range') or d['sub']}）" + (f"，每{U}一{'个月' if S.world.get('pace', '月') == '月' else S.world['pace']}" if S.monthly else ""))
         print(S.world_brief())
         if S.world.get("director"): print("待生效天命干预：" + S.world["director"])
         dead = [n for n in S.cfg["order"] if DEAD.search(S.chars[n]["status"])]
@@ -649,6 +690,12 @@ def main():
         th["last"] = a.last if a.last is not None else th["since"]
         wj(p("sim", "world.json"), S.world); S.build_viewer()
         print(f"已登记线索 #{nid}：{a.title}")
+    elif a.cmd == "pace":
+        if not S.monthly: sys.exit("这条线按季计时，不能调步长")
+        S.world["pace"] = a.step
+        wj(p("sim", "world.json"), S.world); S.build_viewer()
+        d = S.date()
+        print(f"下一回起每回一{'个月' if a.step == '月' else a.step}；下一回：{d['main']}（{d['range']}）")
     elif a.cmd == "direct":
         S.world["director"] = a.text.strip()
         S.world["director_public"] = a.public.strip()
