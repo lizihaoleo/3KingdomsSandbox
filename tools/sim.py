@@ -20,7 +20,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(ROOT, ".work")
 SEASONS = "春夏秋冬"
 PACES = {"月": 31, "旬": 10, "周": 7}  # 按月计时时每回的步长（天）
-MAX_SLOW = 4  # 按旬或按周最多连续几回
+MAX_SLOW = 2  # 按旬或按周最多连续几回
+COOLDOWN = 2  # 放慢到上限后至少按月几回
 MONTHS = ["", "一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"]
 DEAD = re.compile("阵亡|病故|被杀|赐死|遇害|自尽|牺牲|处决|遇刺")
 OFFSTAGE = ("未出场", "退场")  # 未出场：候场人物，到时由天道安排登场；退场：仍在世但剧情暂不需要
@@ -295,7 +296,7 @@ class Sim:
         pace = fill(R.get("pace") or "")
         owners = "|".join(self.cfg["factions"])
         pace_note = "" if not self.monthly else f"""
-本{U}按{self.world.get('pace', '月')}推进。时间的快慢由你掌握：平时一{U}一个月；遇到关键时刻（审讯、刺杀前夜、出逃、接头、身份将要暴露），在 JSON 里加 "next_pace":"周"（或"旬"），把下一{U}放慢，让人物之间的试探一来一回写细；事情了结后加 "next_pace":"月" 恢复。不写则保持现在的步长。放慢最多连续 {MAX_SLOW} {U}，眼下已连续放慢 {self.world.get('slow', 0)} {U}，到了上限引擎会自动恢复按月，请提前把要紧的事收住。史实时间表上的日子落在哪一{U}，就在哪一{U}发生。"""
+本{U}按{self.world.get('pace', '月')}推进。时间的快慢由你掌握：平时一{U}一个月；遇到关键时刻（审讯、刺杀前夜、出逃、接头、身份将要暴露），在 JSON 里加 "next_pace":"周"（或"旬"），把下一{U}放慢，让人物之间的试探一来一回写细；事情了结后加 "next_pace":"月" 恢复。不写则保持现在的步长。放慢最多连续 {MAX_SLOW} {U}，眼下已连续放慢 {self.world.get('slow', 0)} {U}，到了上限引擎会自动恢复按月，之后至少按月 {COOLDOWN} {U}才能再放慢{f"（还需按月 {self.world.get('cool', 0)} {U}）" if self.world.get('cool', 0) else ""}。全书要在1941年12月收官，现在离终点还远，平时请按月推进。史实时间表上的日子落在哪一{U}，就在哪一{U}发生。"""
         return f"""你是一场{L['genre']}的“天道”裁判。前提：{self.cfg['premise']}
 现在是{d['main']}（{d.get('range') or d['sub']}）。请裁定这一{U}（{self.span_text()}）众人行动的结果。{pace_note}
 
@@ -478,12 +479,14 @@ events 3-6条；只列出有变化的{L['city']}、关系和人物；被截获�
                     self.world["month"] = 1; self.world["year"] += 1
             else:
                 self.world["day"] = b + 1
-            if J.get("next_pace") in PACES:
+            # 放慢最多连续 MAX_SLOW 回；恢复按月后至少按月 COOLDOWN 回才能再放慢，免得全书卡在几个星期里
+            cool = self.world.get("cool", 0)
+            if J.get("next_pace") in PACES and (J["next_pace"] == "月" or cool <= 0):
                 self.world["pace"] = J["next_pace"]
-            # 放慢最多连续 MAX_SLOW 回，之后强制回到按月，免得全书卡在几个星期里
+            self.world["cool"] = max(0, cool - 1)
             self.world["slow"] = self.world.get("slow", 0) + 1 if self.world.get("pace", "月") != "月" else 0
             if self.world["slow"] > MAX_SLOW:
-                self.world["pace"], self.world["slow"] = "月", 0
+                self.world["pace"], self.world["slow"], self.world["cool"] = "月", 0, COOLDOWN
         else:
             self.world["season"] += 1
             if self.world["season"] > 3:
