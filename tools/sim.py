@@ -119,6 +119,11 @@ class Sim:
             tick = SEASONS[s]
         return {"main": f"{era['name']}{'元' if y - era['base'] == 1 else cn(y - era['base'])}年 · {tick}", "sub": f"公元 {y} 年"}
 
+    def dead_line(self):
+        """已故人物名单：人物的记忆里常把死人当活人，简报里要明说。"""
+        dead = [f"{n}（{self.chars[n]['status']}）" for n in self.cfg["order"] if DEAD.search(self.chars[n]["status"])]
+        return "【已故人物】" + ("、".join(dead) if dead else "无")
+
     def always(self):
         """每回合必定登场的主角。"""
         return self.cfg.get("always") or [self.cfg["leads"]["male"]]
@@ -241,6 +246,7 @@ class Sim:
 {(f"【本{L['unit']}开局】" + self.world['director_public']) if self.world.get('director_public') else ''}
 {(f"【上{L['unit']}众人公开言论】" + chr(10) + speeches) if speeches else ''}
 
+{self.dead_line()}
 【你私下记得的事】{'；'.join(c['memory'][-8:]) or '无'}
 【你收到的密信】
 {inbox}
@@ -314,6 +320,8 @@ summary 与 events 用史书或小说的笔法，不要出现“{L['food']}40”
 
 【人物（姓名|阵营|年龄|身份|状态|所在｜{R.get('hist_label', '史实走向，仅供你参考')}｜底牌，只有本人和你知道）】
 {chars}
+
+{self.dead_line()}（他们已经死了，不得再以活人身份出现在任何事件里，只能作为往事被提起。）
 
 【候场人物（尚未登场）】
 {pool}
