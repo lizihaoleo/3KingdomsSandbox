@@ -492,7 +492,7 @@ events 3-6条；只列出有变化的{L['city']}、关系和人物；被截获�
             cool = self.world.get("cool", 0)
             if J.get("next_pace") in PACES and (J["next_pace"] == "月" or cool <= 0):
                 if J["next_pace"] == "月" and self.world.get("pace", "月") != "月":
-                    cool = COOLDOWN + 1  # 放慢结束、恢复按月，同样要按月几回才能再放慢
+                    cool = COOLDOWN  # 放慢结束、恢复按月，同样要按月几回才能再放慢
                 self.world["pace"] = J["next_pace"]
             self.world["cool"] = max(0, cool - 1) if full else cool
             self.world["slow"] = self.world.get("slow", 0) + 1 if self.world.get("pace", "月") != "月" else 0
