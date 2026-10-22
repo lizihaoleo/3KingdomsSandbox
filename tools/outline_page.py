@@ -44,6 +44,7 @@ def inline(s):
     s = html.escape(s, quote=False)
     s = re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
     s = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+    s = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r'<a href="\2">\1</a>', s)
     return s.replace("（爽点）", '<span class="hit">爽点</span>').replace("（卷末反转）", '<span class="hit">卷末反转</span>')
 
 
