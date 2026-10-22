@@ -69,7 +69,7 @@ class Sim:
     def date(self, y=None, s=None):
         y = self.world["year"] if y is None else y
         s = self.world["season"] if s is None else s
-        era = self.cfg["era"]
+        era = self.world.get("era") or self.cfg["era"]
         return {"main": f"{era['name']}{cn(y - era['base'])}年 · {SEASONS[s]}", "sub": f"公元 {y} 年"}
 
     def age(self, n):
@@ -138,11 +138,12 @@ class Sim:
             ag = (ag[:n] if n else ag) + [x for x in self.world.get("director_cast") or [] if x in alive and x not in ag]
             return ag
         n = n or 7
-        must = [x for x in ["刘禅", "张皇后", "司马懿", "孙权", "曹叡"] if x in alive]
+        must = [x for x in self.cfg["must"] if x in alive]
         mail = [x for x in alive if self.chars[x]["inbox"] and x not in must]
         rest = [x for x in alive if x not in must and x not in mail]
         random.Random(self.world["turn"] * 7919 + len(self.log)).shuffle(rest)
-        return (must + mail + rest)[: max(n, len(must))]
+        ag = (must + mail + rest)[: max(n, len(must))]
+        return ag + [x for x in self.world.get("director_cast") or [] if x in alive and x not in ag]
 
     # ---------- 简报 ----------
     def brief(self, n):
@@ -152,7 +153,7 @@ class Sim:
         speeches = "\n".join(f"{a['name']}公开说：{a['public_speech']}" for a in last if a.get("public_speech"))
         soul = n == "刘禅"
         premise = self.cfg["premise"] if soul else self.cfg.get("public_premise", self.cfg["premise"])
-        secret = "（你就是那个被诸葛亮之魂附身的刘禅。）" if soul else ""
+        secret = self.cfg["leads"]["secret"] if soul else ""
         inbox = "\n".join(f"{m['from']}来信：{m['content']}" for m in c["inbox"]) or "无"
         return f"""你将扮演三国历史人物「{n}」，参与一场多智能体历史推演。其他人物由其他独立的AI扮演，他们看不到你的内心。请完全代入此人的身份、性格、立场与认知局限，深思熟虑后行动。
 
@@ -215,6 +216,7 @@ class Sim:
         d = self.date()
         director = self.world.get("director", "").strip()
         END = self.cfg.get("end_turn", 40)
+        R = self.cfg["rules"]
         return f"""你是一场三国架空历史推演的“天道”裁判。前提：{self.cfg['premise']}
 现在是{d['main']}（{d['sub']}）。请裁定这一季（三个月）众人行动的结果。
 
@@ -222,13 +224,12 @@ class Sim:
 1. 每季至少裁出一场分出胜负的正面冲突（战场、朝堂或谋略），有明确的赢家和代价，不要各自退兵、不了了之。
 2. 每三四季至少一次大转折：城池易手、重要人物死亡、叛变或下狱、秘密险些曝光。距上次大转折已三季以上的，本季就要安排。
 3. 谋划周密又抓住时机的一方，给足回报（大胜而不是小胜）；冒进、失算的一方要付出沉重代价。主角也会挨重拳。
-4. 亮魂身份是全书最大的秘密：每隔几季安排一次真正的险情，让它差点被戳穿，而不只是有人心里起疑。
-   众人的猜测要合乎常理：见到孔明的笔迹、口吻、谋略，旁人首先会想到“孔明诈死、藏身成都”或“孔明旧人代笔、留有锦囊”，尤其魏、吴两国没人亲眼见过孔明的尸身，诈死之说最可能流行，也最可能引出开棺验尸、搜宫索人这类行动。鬼神附体之说只能是谣言、方士之言或极少数人的直觉，不能成为聪明人的首选结论。
+{R['secret']}
 5. 各方都按兵不动时，用天灾、叛乱、意外死亡、内奸等外部变数打破僵局；年老者可能病故，但要合理。
-6. 男女主角：男主是刘禅（亮魂），女主是张皇后与黄月英，辛宪英是魏方的对手型女主。每一两季至少安排一场男主与女主的直接互动（对话、冲突、试探或合作），写进 events；女主的行动同样要有实际后果。
+{R['leads']}
 7. 伏笔要回收：优先让已铺垫的线索结出果子，不要只开新坑。
 8. 爽点每季都要有：至少一个让读者拍案的高光时刻，优先给男主刘禅（智斗胜出、当众打脸、以少胜多、反将一军、识破杀局），也可以给女主或蜀方将相。高光要靠众人行动里的谋划挣来，写清因果；同一季对手也可以有自己的胜利，主角照样会挨打。
-9. 节奏要紧凑，大势要推进：这部书要一路写到三国乱世终结（天下一统或格局彻底定型），计划在第{END}季前后收官，现在是第{now}季。每季局面都要有实质变化，不要来回拉锯；越接近收官，越要推动灭国之战、都城易手、君主更替这类决定性事件。疆域要真的动起来：城池易手一律写进 city_changes，进入后半程（过了第{END // 2}季）每季至少有一座城池易主。乱世真正终结的那一季，在 JSON 里加上 "ending":"终局说明，100字内"，并了结全部线索。
+9. 节奏要紧凑，大势要推进：这部书要一路写到三国乱世终结（天下一统或格局彻底定型），计划在第{END}季前后收官，现在是第{now}季。每季局面都要有实质变化，不要来回拉锯；越接近收官，越要推动灭国之战、都城易手、君主更替这类决定性事件。疆域要真的动起来：城池易手一律写进 city_changes，进入后半程（过了第{END // 2}季）每季至少有一座城池易主。天子改元或换朝时，在 JSON 里加上 "era":{{"name":"新年号","base":新年号元年减一的公元年}}。乱世真正终结的那一季，在 JSON 里加上 "ending":"终局说明，100字内"，并了结全部线索。
 summary 与 events 用史书或小说的笔法，不要出现“粮40”“民心60”这类数值。
 
 【人物（姓名|势力|年龄|职位|状态|所在｜史实走向，仅供你参考）】
@@ -250,12 +251,12 @@ summary 与 events 用史书或小说的笔法，不要出现“粮40”“民�
 {('【天命干预：本季必须发生并据此推演】' + director) if director else ''}
 
 【登场名单与人物进退】
-- 历史已因亮魂附身而改变，史实走向只是参考：寿数将尽者可能如期病故，也可能因剧情而早逝或延年；因人事而死者（如被杀）要看本推演中的局势是否还会走到那一步。
+- 历史已因{R['change']}而改变，史实走向只是参考：寿数将尽者可能如期病故，也可能因剧情而早逝或延年；因人事而死者（如被杀）要看本推演中的局势是否还会走到那一步。
 - 候场人物到了史载的时候，或剧情需要时，用 debuts 安排登场（同样可让“退场”者重新登场）。剧情暂时不需要、但仍在世的人，在 character_changes 里把状态设为“退场”；死亡用相应状态。
 【悬而未决的线索】（按搁置时间排序，最久的在前）
 {threads}
 - 伏笔要按时回收，读者才不会迷惑：普通线索从开出到了结不得超过 8 季；“还剩 2 季”以内的要推向结局，“已超期”的本季必须了结，并写明结局。每季至少了结一条，同时开出的新线索不得多于了结的数量加一。
-- 只有全书级的重大反转或主钩子（如亮魂身份最终如何揭晓）可以登记为 major，长期保留，目前已有 {n_major} 条，全书最多 3 条；它们也要在全书高潮时回收，不能不了了之。已有线索可在 update 里加 "major": true 升格。
+- 只有全书级的重大反转或主钩子（如{R['hook']}）可以登记为 major，长期保留，目前已有 {n_major} 条，全书最多 3 条；它们也要在全书高潮时回收，不能不了了之。已有线索可在 update 里加 "major": true 升格。
 - 已搁置 4 季以上没有进展的，本季必须有下文。用 threads.update 记进展，threads.close 了结并写明结局。
 - 本季新出现、但三个月内办不完的事（请命未批、叛乱未平、密谋未发、承诺未兑现等），用 threads.open 登记，免得日后被遗忘。
 - 久未亲自思考的人物（4 季以上）：{idle}。他们的处境同样在变化，可在背景中交代，必要时点名登场。
@@ -379,6 +380,8 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             "before": before, "after": self.snapshot(),
             "threads": tlog, "debuts": debuts, "exits": exits, "next_cast": [{"name": n, "why": why.get(n, "")} for n in cast[:12]],
         }
+        if isinstance(J.get("era"), dict) and J["era"].get("name") and isinstance(J["era"].get("base"), int):
+            self.world["era"] = {"name": str(J["era"]["name"]), "base": J["era"]["base"]}
         if J.get("ending"):
             entry["ending"] = str(J["ending"]); self.world["ended"] = entry["ending"]
         self.log.append(entry)

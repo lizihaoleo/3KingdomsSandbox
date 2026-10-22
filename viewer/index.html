@@ -355,7 +355,7 @@ $("decree-now").textContent=W.director?`当前已设：${W.director}（留空提
 
 /* ---------- 顶部 ---------- */
 function renderTop(){
-  $("date").textContent=`${CFG.era.name}${cn(W.year-CFG.era.base)}年 · ${SEASONS[W.season]}`;
+  $("date").textContent=`${(W.era||CFG.era).name}${cn(W.year-(W.era||CFG.era).base)}年 · ${SEASONS[W.season]}`;
   put($("when-sub"),`已推演 ${W.turn} 季 · 公元 ${W.year} 年 · 分支 `,el("em",{},SIM.branch||"未知"),W.director?` · 下一季天命：${W.director}`:"");
 }
 function factionStats(cities,factions,f){const own=Object.values(cities).filter(c=>c.owner===f);return{cities:own.length,troops:own.reduce((a,c)=>a+c.troops,0),food:factions[f].food,morale:factions[f].morale}}
@@ -569,7 +569,7 @@ function renderPerson(){
   }
   put($("person"),
     el("div",{class:"who-h"},el("h2",{},n),el("span",{class:"chip",style:`background:${COL[c.faction]}`},c.faction),
-      n==="刘禅"?el("span",{class:"chip",style:"background:var(--gold)"},"亮魂"):null,
+      n===(CFG.leads||{}).male?el("span",{class:"chip",style:"background:var(--gold)"},(CFG.leads||{}).tag||"主角"):null,
       el("span",{class:"meta"},`${age(n)} 岁 · ${c.role} · ${c.status} · 在${c.loc}`)),
     el("div",{class:"ptabs",role:"tablist","aria-label":"人物档案"},tabs.map(([k,l])=>el("button",{type:"button",role:"tab","aria-selected":ptab===k?"true":"false",onclick:()=>{ptab=k;renderPerson()}},l))),
     el("div",{role:"tabpanel"},body));
