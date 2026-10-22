@@ -47,14 +47,6 @@ header.top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items
 .btn.primary{background:var(--gold);border-color:var(--gold);color:var(--on-gold);font-weight:700;padding:0 20px}
 .btn.primary:hover{background:var(--gold-hi)}
 .btn[aria-expanded=true]{border-color:var(--gold);color:var(--gold)}
-.sess{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);min-height:44px;padding:0 4px}
-.sess i{width:8px;height:8px;border-radius:50%;background:var(--dim)}
-.sess.busy i{background:var(--gold);animation:pulse 1.4s ease-in-out infinite}
-.sess.idle i{background:var(--good)}
-.btn.armed{background:var(--bad);border-color:var(--bad);color:var(--on-gold)}
-.btn:disabled{opacity:.45;cursor:default}
-@keyframes pulse{50%{opacity:.35}}
-@media (prefers-reduced-motion:reduce){.sess.busy i{animation:none}}
 .decree{display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
 .decree label{font-size:12px;color:var(--muted)}
 .decree input{flex:1 1 260px;min-width:0;min-height:44px;padding:0 12px;font:inherit;color:var(--ink);background:var(--sunk);border:1px solid var(--line-2);border-radius:4px}
@@ -118,7 +110,7 @@ nav.views button[aria-current=page]{background:var(--gold);color:var(--on-gold)}
 .court .mail{position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--bad)}
 .court button.dead .n b{text-decoration:line-through;color:var(--muted)}
 .court button.off{opacity:.55;border-style:dashed}
-.court .next{position:absolute;right:6px;bottom:6px;font-size:10px;padding:0 5px;border-radius:3px;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold)}
+.court .next{position:absolute;right:22px;top:6px;font-size:10px;padding:0 5px;border-radius:3px;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold)}
 .chron .cast{margin:12px 0 0;font-size:13px;color:var(--ink-2)}
 .chron .cast b{color:var(--gold);font-weight:500;margin-right:6px}
 
@@ -128,7 +120,7 @@ nav.views button[aria-current=page]{background:var(--gold);color:var(--on-gold)}
 .who-h .meta{font-size:12px;color:var(--muted);margin-left:auto}
 .chip{font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px;color:var(--on-gold)}
 .bio{margin:8px 0 0;color:var(--ink-2);font-size:13px}
-.ptabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:var(--sunk);border-radius:6px;padding:4px;margin:14px 0 12px}
+.ptabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;background:var(--sunk);border-radius:6px;padding:4px;margin:14px 0 12px}
 .ptabs button{min-height:44px;border:0;border-radius:4px;background:transparent;font-size:14px;font-weight:500}
 .ptabs button[aria-selected=true]{background:var(--gold);color:var(--on-gold)}
 .lbl{font-size:11px;letter-spacing:.14em;color:var(--muted);margin:14px 0 6px}
@@ -190,6 +182,33 @@ ul.mem li:last-child{border-bottom:0}
 .agent .s{font-size:13px}
 .agent .s em{font-style:normal;color:var(--gold)}
 
+/* 小传与关系图 */
+.intro{margin:0;font-family:var(--f-serif);font-size:15px;line-height:1.9}
+.ties{display:flex;flex-wrap:wrap;gap:6px}
+.ties button{min-height:36px;padding:2px 10px;border-radius:18px;border:1px solid var(--line-2);background:var(--panel-2);font-size:13px;display:flex;align-items:center;gap:6px}
+.ties button:hover{border-color:var(--gold)}
+.ties button b{font-family:var(--f-serif);font-weight:700}
+.ties button span{color:var(--muted);font-size:12px}
+details.spoil{margin-top:14px;font-size:13px;color:var(--ink-2)}
+details.spoil summary{cursor:pointer;color:var(--muted);min-height:32px;display:flex;align-items:center}
+.graph-wrap{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.graph-main{flex:999 1 640px;min-width:0}
+.graph-side{flex:1 1 320px;min-width:0}
+.graph svg{display:block;width:100%;height:auto;max-height:80vh;background:var(--sunk);border-radius:4px}
+.gnode{cursor:pointer}
+.gnode text{font-family:var(--f-serif);font-size:13px;fill:var(--ink);paint-order:stroke;stroke:var(--sunk);stroke-width:3px}
+.gnode.dim{opacity:.25}
+.gnode.sel circle{stroke:var(--gold);stroke-width:3}
+.gnode:focus-visible circle{stroke:var(--gold-hi);stroke-width:3}
+.gedge{fill:none;transition:opacity .2s}
+.gedge.dim{opacity:.06}
+.glabel{font-size:11px;fill:var(--ink-2);paint-order:stroke;stroke:var(--sunk);stroke-width:3px;pointer-events:none}
+.gfilters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.gfilters button{min-height:36px;padding:0 12px;border-radius:4px;border:1px solid var(--line);background:var(--panel-2);font-size:13px}
+.gfilters button[aria-pressed=true]{border-color:var(--gold);color:var(--gold)}
+.glegend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.glegend i{display:inline-block;width:22px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}
+
 /* 平行历史 */
 .scroll-x{overflow-x:auto}
 .matrix{display:grid;gap:6px;min-width:100%}
@@ -228,7 +247,6 @@ table.cmp td:first-child{font-family:var(--f-serif)}
       <div class="when"><b id="date"></b><span id="when-sub"></span></div>
     </div>
     <div class="cmds">
-      <span class="sess" id="sess" role="status" hidden><i></i><span></span></span>
       <button class="btn primary" type="button" data-cmd="/turn">推演一季</button>
       <button class="btn" type="button" data-cmd="/turn 4">连推一年</button>
       <button class="btn" type="button" id="decree-toggle" aria-expanded="false" aria-controls="decree">天命干预</button>
@@ -245,6 +263,7 @@ table.cmp td:first-child{font-family:var(--f-serif)}
   <nav class="views" aria-label="视图">
     <button type="button" data-view="map">沙盘</button>
     <button type="button" data-view="acts">众人心思</button>
+    <button type="button" data-view="graph">关系图</button>
     <button type="button" data-view="roster">人物名册</button>
     <button type="button" data-view="branches">平行历史</button>
   </nav>
@@ -275,12 +294,16 @@ table.cmp td:first-child{font-family:var(--f-serif)}
       <div class="col-side">
         <section class="card" id="person" aria-live="polite"></section>
         <section class="card chron" id="chron"></section>
+        <section class="card" id="threads"></section>
       </div>
     </div>
   </section>
 
   <!-- 众人心思 -->
   <section id="v-acts" data-v="acts" class="view" hidden></section>
+
+  <!-- 关系图 -->
+  <section id="v-graph" data-v="graph" class="view" hidden></section>
 
   <!-- 人物名册 -->
   <section id="v-roster" data-v="roster" class="view" hidden></section>
@@ -314,7 +337,7 @@ const turnLabel=t=>t.turn===0?"序幕":`第 ${t.turn} 季`;
 const latest=LOG.at(-1)||null;
 const appeared=new Set((latest?.acts||[]).map(a=>a.name));
 
-let selected="刘禅", ptab="mind", chronIdx=LOG.length-1, actsIdx=LOG.length-1, selCity=CHARS["刘禅"]?.loc||"成都";
+let selected="刘禅", ptab="intro", chronIdx=LOG.length-1, actsIdx=LOG.length-1, selCity=CHARS["刘禅"]?.loc||"成都";
 for(let i=LOG.length-1;i>=0;i--){if(LOG[i].acts?.length){actsIdx=i;break}}
 
 /* ---------- 复制命令 ---------- */
@@ -325,45 +348,14 @@ function copy(cmd){
   const fail=()=>toast("复制被拦下了，请手动选中这条命令：",cmd);
   try{navigator.clipboard.writeText(cmd).then(ok,fail)}catch(e){fail()}
 }
-/* ---------- 按钮直接推进：经 Claude Code Remote 连接器给推演会话发固定命令 ---------- */
-// 只发白名单里的三条命令；天命干预含自由文字，仍走复制。会话推完后重建并重新发布本页，打开着的页面自动刷新
-const SESSION="session_01R2yYMkrSgmNCYFs5PpAYEW", PAGE_URL="https://claude.ai/artifact/Tse3nhhTeUnCHe32G1ZcTi", CCR="Claude Code Remote";
-const ALLOWED={"/turn":"确认推演一季？","/turn 4":"确认连推四季？","/outline":"确认整理大纲？"};
-let mcp=null, busy=false, armed=null, armTimer;
-function setBusy(b,label){busy=b;const e=$("sess");e.hidden=false;e.className="sess "+(b?"busy":"idle");e.lastElementChild.textContent=label||(b?"推演会话工作中…":"推演会话待命");
-  document.querySelectorAll("[data-cmd]").forEach(x=>x.disabled=b)}
-async function send(cmd){
-  if(!(cmd in ALLOWED))return;
-  const msg=`【季汉推演查看器】页面按钮：${cmd}\n按 CLAUDE.md 的流程执行，提交并推送，再运行 python3 tools/sim.py build-viewer，把 viewer/index.html 连同 data.js 重新发布到 ${PAGE_URL}。`;
-  setBusy(true,"正在送出…");
-  try{await mcp.callTool(CCR,"send_message",{session_id:SESSION,message:msg});setBusy(true,"已送达，推演会话工作中…");toast("已送往推演会话，推完后本页会自动刷新：",cmd)}
-  catch(e){setBusy(false);const c=e&&e.code;
-    if(c==="approval_required"||c==="not_in_manifest")toast("需要先允许本页使用 Claude Code Remote 连接器，再点一次。也可以手动发送：",cmd);
-    else if(c==="server_not_connected"||c==="needs_reauth")toast("Claude Code Remote 连接器不可用，请在 claude.ai 设置 → 连接器里检查。也可以手动发送：",cmd);
-    else if(c==="tool_error")toast("推演会话没有收下消息，可能已结束。请在新会话里手动发送：",cmd);
-    else toast(`发送结果不确定（${c||"未知错误"}），先别重复点。也可以手动发送：`,cmd)}
-}
-function disarm(){clearTimeout(armTimer);if(armed){armed.textContent=armed.dataset.label;armed.classList.remove("armed")}armed=null}
-function act(btn,cmd){
-  if(!mcp){copy(cmd);return}
-  if(busy)return;
-  if(armed!==btn){disarm();armed=btn;btn.dataset.label=btn.textContent;btn.textContent=ALLOWED[cmd]||"确认？";btn.classList.add("armed");armTimer=setTimeout(disarm,4000);return}
-  disarm();send(cmd);
-}
-document.querySelectorAll("[data-cmd]").forEach(b=>b.addEventListener("click",()=>act(b,b.dataset.cmd)));
-(window.claude?.use?window.claude.use("mcp"):Promise.resolve(null)).then(m=>{
-  if(!m)return;mcp=m;setBusy(false);
-  mcp.watchTool(CCR,"get_session",{session_id:SESSION},ev=>{
-    if(ev.type!=="data")return;const p=ev.result.payload||{},b=String((p.ccr||p).status_bucket||"");
-    if(/WORKING/.test(b))setBusy(true);else if(b)setBusy(false,/FAILED/.test(b)?"推演会话上一轮出错":"推演会话待命")},{refetchInterval:30000});
-}).catch(()=>{});
+document.querySelectorAll("[data-cmd]").forEach(b=>b.addEventListener("click",()=>copy(b.dataset.cmd)));
 $("decree-toggle").addEventListener("click",e=>{const f=$("decree"),open=f.hidden;f.hidden=!open;e.currentTarget.setAttribute("aria-expanded",open);if(open)$("decree-text").focus()});
 $("decree").addEventListener("submit",e=>{e.preventDefault();const v=$("decree-text").value.trim();copy(v?"/direct "+v:"/direct")});
 $("decree-now").textContent=W.director?`当前已设：${W.director}（留空提交即清除）`:"留空提交即清除已设的天命";
 
 /* ---------- 顶部 ---------- */
 function renderTop(){
-  $("date").textContent=`${CFG.era.name}${cn(W.year-CFG.era.base)}年 · ${SEASONS[W.season]}`;
+  $("date").textContent=`${(W.era||CFG.era).name}${W.year-(W.era||CFG.era).base===1?"元":cn(W.year-(W.era||CFG.era).base)}年 · ${SEASONS[W.season]}`;
   put($("when-sub"),`已推演 ${W.turn} 季 · 公元 ${W.year} 年 · 分支 `,el("em",{},SIM.branch||"未知"),W.director?` · 下一季天命：${W.director}`:"");
 }
 function factionStats(cities,factions,f){const own=Object.values(cities).filter(c=>c.owner===f);return{cities:own.length,troops:own.reduce((a,c)=>a+c.troops,0),food:factions[f].food,morale:factions[f].morale}}
@@ -548,9 +540,15 @@ function select(n,scroll){
 }
 function renderPerson(){
   const n=selected,c=CHARS[n],[act,actT]=lastAct(n);
-  const tabs=[["mind","心思"],["letters","密信"],["memory","记忆"],["rel","人际"]];
+  const tabs=[["intro","小传"],["mind","心思"],["letters","密信"],["memory","记忆"],["rel","人际"]];
   let body;
-  if(ptab==="mind"){
+  if(ptab==="intro"){
+    const T=tiesOf(n);
+    body=[el("p",{class:"intro"},c.intro||c.bio),
+      T.length?[el("div",{class:"lbl"},"史实上的亲故"),el("div",{class:"ties"},T.map(([o,l,d])=>el("button",{type:"button",title:d||l,onclick:()=>select(o)},el("b",{},o),el("span",{},l))))]:null,
+      el("button",{type:"button",class:"linkbtn",onclick:()=>{gFocus=n;go("graph")}},"在关系图里看他的人际网"),
+      c.hist?el("details",{class:"spoil"},el("summary",{},"真实历史上他后来怎样（剧透）"),el("p",{style:"margin:6px 0 0"},c.hist.replace(/^史实：/,""))):null];
+  }else if(ptab==="mind"){
     body=[el("div",{class:"lbl"},actT?`内心 · ${turnLabel(actT)} · ${actT.date.main}`:"内心"),
       c.thought?el("p",{class:"prose"},c.thought):el("p",{class:"empty"},"尚未登场推演。推演后这里是此人最近一次的真实盘算。")];
     if(act){const a=act.action||{};
@@ -565,15 +563,14 @@ function renderPerson(){
     body=M.length?el("ul",{class:"mem"},M.map(m=>el("li",{},m))):el("p",{class:"empty"},"心里还没有记下什么事。");
   }else{
     const R=Object.entries(W.rel).filter(([k])=>k.split("|").includes(n)).map(([k,v])=>[k.split("|").find(x=>x!==n),v]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
-    body=R.length?el("div",{class:"stack"},R.map(([o,v])=>el("button",{type:"button",class:"rel",onclick:()=>select(o)},
+    body=R.length?[el("p",{class:"empty",style:"margin-bottom:8px"},"推演中此人对他人的好恶，-100 敌视到 100 亲信，会随剧情变化。"),el("div",{class:"stack"},R.map(([o,v])=>el("button",{type:"button",class:"rel",onclick:()=>select(o)},
       el("span",{class:"top"},el("span",{},o),el("b",{style:`color:${v>=0?"var(--good)":"var(--bad)"}`},sgn(v))),
-      el("span",{class:"bar"},el("i",{style:`left:${v>=0?50:50+v/2}%;width:${Math.abs(v)/2}%;background:${v>=0?"var(--good)":"var(--bad)"}`}))))):el("p",{class:"empty"},"无显著关系。");
+      el("span",{class:"bar"},el("i",{style:`left:${v>=0?50:50+v/2}%;width:${Math.abs(v)/2}%;background:${v>=0?"var(--good)":"var(--bad)"}`})))))]:el("p",{class:"empty"},"无显著关系。");
   }
   put($("person"),
     el("div",{class:"who-h"},el("h2",{},n),el("span",{class:"chip",style:`background:${COL[c.faction]}`},c.faction),
-      n==="刘禅"?el("span",{class:"chip",style:"background:var(--gold)"},"亮魂"):null,
+      n===(CFG.leads||{}).male?el("span",{class:"chip",style:"background:var(--gold)"},(CFG.leads||{}).tag||"主角"):null,
       el("span",{class:"meta"},`${age(n)} 岁 · ${c.role} · ${c.status} · 在${c.loc}`)),
-    el("p",{class:"bio"},c.bio),
     el("div",{class:"ptabs",role:"tablist","aria-label":"人物档案"},tabs.map(([k,l])=>el("button",{type:"button",role:"tab","aria-selected":ptab===k?"true":"false",onclick:()=>{ptab=k;renderPerson()}},l))),
     el("div",{role:"tabpanel"},body));
 }
@@ -597,6 +594,16 @@ function renderChron(){
     t.exits?.length?el("p",{class:"cast"},el("b",{},"退场"),t.exits.map(d=>`${d.name}（${d.status}）`).join("；")):null,
     t.next_cast?.length?el("p",{class:"cast"},el("b",{},"下季点名"),["刘禅",...t.next_cast.map(d=>d.name).filter(x=>x!=="刘禅")].join("、")):null,
     n?el("button",{type:"button",class:"linkbtn",onclick:()=>{actsIdx=chronIdx;go("acts")}},`展开众人心思与密信（${n} 人）`):el("p",{class:"empty",style:"margin-top:12px"},"本季无人登场。"));
+}
+
+/* ---------- 悬案 ---------- */
+function renderThreads(){
+  const T=[...(W.threads||[])].sort((a,b)=>(!!a.major-!!b.major)||a.since-b.since);
+  put($("threads"),el("div",{class:"card-h"},el("h2",{},"悬而未决"),el("span",{},`${T.length} 条 · 普通线索 8 季内必须收回`)),
+    T.length?el("div",{class:"evs",style:"display:flex;flex-direction:column;gap:10px"},T.map(x=>{const idle=W.turn-x.last;
+      return el("div",{},el("div",{style:"display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"},el("b",{style:"font-family:var(--f-serif)"},x.title),
+        el("span",{style:`font-size:12px;color:${x.major?"var(--gold)":x.since+8-W.turn-1<=2?"var(--bad)":"var(--muted)"}`},x.major?`第${x.since}季起 · 全书主钩子`:`第${x.since}季起 · ${x.since+8-W.turn-1>0?"还剩"+(x.since+8-W.turn-1)+"季":"本季须了结"}`)),
+        el("div",{style:"font-size:13px;color:var(--ink-2)"},x.detail))})):el("p",{class:"empty"},"暂无。"));
 }
 
 /* ---------- 众人心思 ---------- */
@@ -652,17 +659,77 @@ function renderBranches(){
     B.length<2?el("p",{class:"hint"},"目前只有一条分支。在 Claude Code 里用 /fork 开平行历史，再运行 build-viewer，这里就能逐季对比。"):null);
 }
 
+/* ---------- 关系图 ---------- */
+const TIES=CFG.ties||[];
+function tiesOf(n){return TIES.filter(t=>t[0]===n||t[1]===n).map(([a,b,l,d])=>[a===n?b:a,l,d])}
+let gFocus=null, gShowTies=true, gShowRel=true, gShowAll=false;
+function graphLayout(names){
+  const C={蜀:[240,500],魏:[750,250],吴:[750,760]},pos={},major=new Set(CFG.major||[]);
+  FACTIONS.forEach(f=>{
+    const ns=names.filter(n=>CHARS[n].faction===f).sort((a,b)=>(major.has(b)-major.has(a))||ORDER.indexOf(a)-ORDER.indexOf(b));
+    const inner=ns.filter(n=>major.has(n)),outer=ns.filter(n=>!major.has(n)),[cx,cy]=C[f];
+    const ring=(arr,r,off)=>arr.forEach((n,i)=>{const a=off+i/arr.length*Math.PI*2;pos[n]=[cx+r*Math.cos(a),cy+r*Math.sin(a)*.82]});
+    if(inner.length===1)pos[inner[0]]=[cx,cy];else ring(inner,inner.length>4?78:58,-Math.PI/2);
+    ring(outer,inner.length>4?168:140,-Math.PI/2+.3);
+  });
+  return pos;
+}
+function renderGraph(){
+  const names=ORDER.filter(n=>gShowAll||onStage(n)||CHARS[n].status==="退场");
+  const pos=graphLayout(names),major=new Set(CFG.major||[]),focus=gFocus&&pos[gFocus]?gFocus:null;
+  const near=new Set(focus?[focus]:[]);
+  const edges=[];
+  if(gShowTies)TIES.forEach(([a,b,l,d])=>{if(pos[a]&&pos[b])edges.push({a,b,kind:"tie",l,d})});
+  if(gShowRel)Object.entries(W.rel).forEach(([k,v])=>{const[a,b]=k.split("|");if(pos[a]&&pos[b]&&Math.abs(v)>=(focus?20:40))edges.push({a,b,kind:"rel",v})});
+  if(focus)edges.forEach(e=>{if(e.a===focus)near.add(e.b);if(e.b===focus)near.add(e.a)});
+  const svg=sv("svg",{viewBox:"0 0 1000 1000",role:"img","aria-label":"人物关系图"});
+  [["蜀汉",240,500,"var(--shu)"],["曹魏",750,250,"var(--wei)"],["孙吴",750,760,"var(--wu)"]].forEach(([t,x,y,c])=>{
+    svg.append(sv("text",{x,y:y-195,"text-anchor":"middle",style:`font-family:var(--f-title);font-size:30px;fill:${c};opacity:.55`},t))});
+  edges.forEach(e=>{const[x1,y1]=pos[e.a],[x2,y2]=pos[e.b],mx=(x1+x2)/2,my=(y1+y2)/2,dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy)||1,bend=e.kind==="tie"?.12:-.12;
+    const qx=mx-dy/len*len*bend,qy=my+dx/len*len*bend,on=!focus||e.a===focus||e.b===focus;
+    const st=e.kind==="tie"?"stroke:var(--gold);stroke-width:1.6;stroke-dasharray:5 4":`stroke:${e.v>0?"var(--good)":"var(--bad)"};stroke-width:${(Math.abs(e.v)/28).toFixed(1)}`;
+    svg.append(sv("path",{class:"gedge"+(on?"":" dim"),d:`M${x1},${y1} Q${qx},${qy} ${x2},${y2}`,style:st},sv("title",{},e.kind==="tie"?`${e.a}—${e.b}：${e.l}${e.d?"。"+e.d:""}`:`${e.a}—${e.b} 好恶 ${sgn(e.v)}`)));
+    if(focus&&on&&e.kind==="tie")svg.append(sv("text",{class:"glabel",x:(mx+qx)/2,y:(my+qy)/2,"text-anchor":"middle"},e.l));});
+  names.forEach(n=>{const[x,y]=pos[n],c=CHARS[n],r=major.has(n)?15:10,dead=isDead(n);
+    const g=sv("g",{class:"gnode"+(n===focus?" sel":"")+(focus&&!near.has(n)?" dim":""),tabindex:0,role:"button","aria-label":n,
+      onclick:()=>{gFocus=gFocus===n?null:n;renderGraph()},onkeydown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();gFocus=gFocus===n?null:n;renderGraph()}}});
+    g.append(sv("circle",{cx:x,cy:y,r,style:`fill:${COL[c.faction]};stroke:var(--sunk);stroke-width:2;opacity:${dead||offstage(n)?.4:1}`}));
+    g.append(sv("text",{x,y:y+r+14,"text-anchor":"middle",style:dead?"text-decoration:line-through;opacity:.6":""},n));
+    g.append(sv("title",{},`${n}｜${c.faction}｜${c.role}`));svg.append(g)});
+  const T=focus?tiesOf(focus):[],R=focus?Object.entries(W.rel).filter(([k])=>k.split("|").includes(focus)).map(([k,v])=>[k.split("|").find(x=>x!==focus),v]).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).slice(0,8):[];
+  const side=focus?el("section",{class:"card"},
+      el("div",{class:"who-h"},el("h2",{},focus),el("span",{class:"chip",style:`background:${COL[CHARS[focus].faction]}`},CHARS[focus].faction),
+        el("span",{class:"meta"},`${age(focus)} 岁 · ${CHARS[focus].role} · ${CHARS[focus].status}`)),
+      el("p",{class:"intro",style:"margin-top:10px"},CHARS[focus].intro||CHARS[focus].bio),
+      T.length?[el("div",{class:"lbl"},"史实上的亲故（金色虚线）"),el("div",{class:"ties"},T.map(([o,l,d])=>el("button",{type:"button",title:d||l,onclick:()=>{gFocus=o;renderGraph()}},el("b",{},o),el("span",{},l))))]:null,
+      R.length?[el("div",{class:"lbl"},"推演中的好恶（绿亲红恶）"),el("div",{class:"ties"},R.map(([o,v])=>el("button",{type:"button",onclick:()=>{gFocus=o;renderGraph()}},el("b",{},o),el("span",{style:`color:${v>=0?"var(--good)":"var(--bad)"}`},sgn(v)))))]:null,
+      el("button",{type:"button",class:"btn",style:"margin-top:14px",onclick:()=>{select(focus);ptab="intro";renderPerson();go("map");$("person").scrollIntoView({block:"start"})}},"打开完整档案"))
+    :el("section",{class:"card"},el("h2",{style:"margin:0 0 8px;font-family:var(--f-serif);font-size:17px"},"怎么看这张图"),
+      el("p",{class:"empty",style:"line-height:1.8"},"三国各成一团，大圆是主要人物。金色虚线是史书里就有的亲缘、旧谊或宿怨，比如父子、翁婿、夷陵之仇；绿线和红线是推演中逐渐形成的亲近与敌视，线越粗越强烈。点任意一人，只看他的关系，并在这里读他的小传。"));
+  const fbtn=(label,on,fn)=>el("button",{type:"button","aria-pressed":on?"true":"false",onclick:()=>{fn();renderGraph()}},label);
+  put($("v-graph"),
+    el("div",{class:"page-h"},el("div",{},el("h2",{},"人物关系图"),el("div",{class:"sub"},"不熟悉三国人物也没关系：点一个人，看他是谁、和谁有什么渊源。")),
+      el("button",{type:"button",class:"btn",onclick:()=>go("map")},"回到沙盘")),
+    el("div",{class:"graph-wrap"},
+      el("section",{class:"card graph-main graph"},
+        el("div",{class:"gfilters"},fbtn("史实亲故",gShowTies,()=>gShowTies=!gShowTies),fbtn("推演好恶",gShowRel,()=>gShowRel=!gShowRel),fbtn("含候场与已故",gShowAll,()=>gShowAll=!gShowAll),
+          focus?el("button",{type:"button",onclick:()=>{gFocus=null;renderGraph()}},"看全部"):null),
+        svg,
+        el("div",{class:"glegend"},el("span",{},el("i",{style:"border-color:var(--gold);border-top-style:dashed"}),"史实亲故"),el("span",{},el("i",{style:"border-color:var(--good)"}),"亲近"),el("span",{},el("i",{style:"border-color:var(--bad)"}),"敌视"),el("span",{},"大圆为主要人物"))),
+      el("div",{class:"graph-side"},side)));
+}
+
 /* ---------- 视图切换 ---------- */
-const VIEWS=["map","acts","roster","branches"];
+const VIEWS=["map","acts","graph","roster","branches"];
 function go(v,noHash){
   if(!VIEWS.includes(v))v="map";
   document.querySelectorAll("[data-v]").forEach(s=>s.hidden=s.dataset.v!==v);
   document.querySelectorAll("nav.views button").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v?"page":"false"));
-  if(v==="acts")renderActs();if(v==="roster")renderRoster();if(v==="branches")renderBranches();
+  if(v==="acts")renderActs();if(v==="roster")renderRoster();if(v==="graph")renderGraph();if(v==="branches")renderBranches();
   if(!noHash){try{history.replaceState(null,"",v==="map"?location.pathname+location.search:"#"+v)}catch(e){}}
 }
 document.querySelectorAll("nav.views button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
 
-renderTop();renderFacts();buildMap();renderCityInfo();renderCourt();renderPerson();renderChron();
+renderTop();renderFacts();buildMap();renderCityInfo();renderCourt();renderPerson();renderChron();renderThreads();
 go((location.hash||"").slice(1)||"map",true);
 </script>
