@@ -70,7 +70,7 @@ class Sim:
         y = self.world["year"] if y is None else y
         s = self.world["season"] if s is None else s
         era = self.world.get("era") or self.cfg["era"]
-        return {"main": f"{era['name']}{cn(y - era['base'])}年 · {SEASONS[s]}", "sub": f"公元 {y} 年"}
+        return {"main": f"{era['name']}{'元' if y - era['base'] == 1 else cn(y - era['base'])}年 · {SEASONS[s]}", "sub": f"公元 {y} 年"}
 
     def age(self, n):
         return self.world["year"] - self.chars[n]["birth"]
