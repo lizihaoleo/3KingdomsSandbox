@@ -610,6 +610,21 @@ def load_act(name, path, order, types=ACTION_TYPES):
             "memory": str(r.get("memory") or "")}, None
 
 
+def load_judge(path):
+    """读裁定 JSON；裁判常把对象提前多闭合一个括号、后面还跟着字段，此时去掉那个括号再读。"""
+    s = open(path, encoding="utf-8").read()
+    try:
+        return json.loads(s)
+    except json.JSONDecodeError as e:
+        rest = s[e.pos:].lstrip()
+        if not e.msg.startswith("Extra data") or not rest.startswith(","):
+            raise
+        head = s[:e.pos].rstrip()
+        if not head.endswith("}"):
+            raise
+        return json.loads(head[:-1] + s[e.pos:])
+
+
 def read_agents():
     f = os.path.join(WORK, "agents.txt")
     if not os.path.exists(f):
@@ -674,7 +689,7 @@ def main():
         except FileNotFoundError:
             sys.exit("缺少 .work/acts.json，请先运行 judge-brief")
         try:
-            J = rj(os.path.join(WORK, "judge.json"))
+            J = load_judge(os.path.join(WORK, "judge.json"))
         except Exception as e:
             sys.exit(f".work/judge.json 不是合法 JSON：{e}\n请让 judge 子代理重新写入。")
         t = S.apply(agents, acts, J)
