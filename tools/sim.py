@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""季汉推演引擎：只负责状态读写、简报生成与裁定落地；思考全部交给 Claude Code 的子代理。
+"""多智能体推演引擎：只负责状态读写、简报生成与裁定落地；思考全部交给 Claude Code 的子代理。
+时代、阵营、计时单位、地图用语都来自 sim/config.json，换时代只需换配置。
 
 子命令：
   status                     当前日期与天下大势
@@ -17,10 +18,14 @@ import argparse, glob, json, os, random, re, shutil, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.path.join(ROOT, ".work")
 SEASONS = "春夏秋冬"
-DEAD = re.compile("阵亡|病故|被杀|赐死|遇害|自尽")
+MONTHS = ["", "一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"]
+DEAD = re.compile("阵亡|病故|被杀|赐死|遇害|自尽|牺牲|处决|遇刺")
 OFFSTAGE = ("未出场", "退场")  # 未出场：候场人物，到时由天道安排登场；退场：仍在世但剧情暂不需要
 STATUSES = ["在任", "出征", "下狱", "隐退", "退场", "叛逃", "阵亡", "病故", "被杀", "自尽"]
 ACTION_TYPES = ["内政", "军事", "外交", "谋略", "人事", "密信", "观望"]
+# 配置里没写的用语沿用三国线的说法
+LABELS = {"genre": "三国历史推演", "unit": "季", "span": "三个月", "city": "城池", "troops": "驻军", "troop_unit": "万",
+          "food": "粮", "morale": "民心", "world": "天下大势", "power": "国力"}
 
 
 def p(*a):
@@ -64,13 +69,32 @@ class Sim:
         self.world = rj(p("sim", "world.json"))
         self.chars = {n: rj(p("sim", "characters", n + ".json")) for n in self.cfg["order"]}
         self.log = rj(p("chronicle", "log.json"))
+        self.L = {**LABELS, **(self.cfg.get("labels") or {})}
+        self.monthly = "month" in self.world
+        self.statuses = self.cfg.get("statuses") or STATUSES
+        self.action_types = self.cfg.get("action_types") or ACTION_TYPES
 
     # ---------- 工具 ----------
     def date(self, y=None, s=None):
         y = self.world["year"] if y is None else y
-        s = self.world["season"] if s is None else s
         era = self.world.get("era") or self.cfg["era"]
-        return {"main": f"{era['name']}{'元' if y - era['base'] == 1 else cn(y - era['base'])}年 · {SEASONS[s]}", "sub": f"公元 {y} 年"}
+        if self.monthly:
+            s = self.world["month"] if s is None else s
+            tick = MONTHS[s]
+        else:
+            s = self.world["season"] if s is None else s
+            tick = SEASONS[s]
+        return {"main": f"{era['name']}{'元' if y - era['base'] == 1 else cn(y - era['base'])}年 · {tick}", "sub": f"公元 {y} 年"}
+
+    def always(self):
+        """每回合必定登场的主角。"""
+        return self.cfg.get("always") or [self.cfg["leads"]["male"]]
+
+    def level(self, kind, v):
+        """把数值换成人物会用的说法；配置里的 plain 是 [[上限, 说法], ...]，最后一项为兜底。"""
+        for lim, word in self.cfg["plain"][kind]:
+            if lim is None or v < lim:
+                return word
 
     def age(self, n):
         return self.world["year"] - self.chars[n]["birth"]
@@ -89,6 +113,15 @@ class Sim:
 
     def world_brief(self, plain=False):
         """plain=True 给人物看：粮草与民心只用此人会有的说法，不出现抽象数值。"""
+        L = self.L
+        if "plain" in self.cfg:
+            if plain:
+                cities = "、".join(f"{k}（{c['owner']}，{self.level('troops', c['troops'])}）" for k, c in self.world["cities"].items())
+                fac = "；".join(f"{f}：{self.level('food', v['food'])}，{self.level('morale', v['morale'])}" for f, v in self.world["factions"].items())
+            else:
+                cities = "、".join(f"{k}({c['owner']}{c['troops']}{L['troop_unit']})" for k, c in self.world["cities"].items())
+                fac = "；".join(f"{f}：{L['food']}{v['food']} {L['morale']}{v['morale']}" for f, v in self.world["factions"].items())
+            return f"{L['city']}（{L['troops']}）：{cities}\n{L['power']}：{fac}"
         cities = "、".join(f"{k}({c['owner']}{c['troops']}万)" for k, c in self.world["cities"].items())
         if plain:
             food = lambda v: "仓廪空虚" if v < 30 else "粮草吃紧" if v < 50 else "粮草尚可" if v < 80 else "仓廪充实" if v < 110 else "积谷如山"
@@ -134,7 +167,8 @@ class Sim:
         alive = self.alive()
         cast = [x for x in self.world.get("cast") or [] if x in alive]
         if cast:
-            ag = (["刘禅"] if "刘禅" in alive else []) + [x for x in cast if x != "刘禅"]
+            lead = [x for x in self.always() if x in alive]
+            ag = lead + [x for x in cast if x not in lead]
             ag = (ag[:n] if n else ag) + [x for x in self.world.get("director_cast") or [] if x in alive and x not in ag]
             return ag
         n = n or 7
@@ -151,44 +185,50 @@ class Sim:
         rels = "，".join(f"{[x for x in k.split('|') if x != n][0]}:{v}" for k, v in self.world["rel"].items() if n in k.split("|"))
         last = self.log[-1].get("acts", [])
         speeches = "\n".join(f"{a['name']}公开说：{a['public_speech']}" for a in last if a.get("public_speech"))
-        soul = n == "刘禅"
+        L = self.L
+        soul = n in self.cfg.get("insiders", [self.cfg["leads"]["male"]])
         premise = self.cfg["premise"] if soul else self.cfg.get("public_premise", self.cfg["premise"])
-        secret = self.cfg["leads"]["secret"] if soul else ""
+        secret = (self.cfg["leads"].get("secret", "") if soul else "") + (f"【只有你自己知道的底牌】{c['secret']}" if c.get("secret") else "")
         inbox = "\n".join(f"{m['from']}来信：{m['content']}" for m in c["inbox"]) or "无"
-        return f"""你将扮演三国历史人物「{n}」，参与一场多智能体历史推演。其他人物由其他独立的AI扮演，他们看不到你的内心。请完全代入此人的身份、性格、立场与认知局限，深思熟虑后行动。
+        types = "|".join(self.action_types)
+        return f"""你将扮演{L['genre']}中的人物「{n}」，参与一场多智能体推演。其他人物由其他独立的AI扮演，他们看不到你的内心。请完全代入此人的身份、性格、立场与认知局限，深思熟虑后行动。
 
 【推演前提】{premise}
 {secret}
 
-【当前】{d['main']}（{d['sub']}），第{self.world['turn'] + 1}季，每季约三个月。
+【当前】{d['main']}（{d['sub']}），第{self.world['turn'] + 1}{L['unit']}，每{L['unit']}约{L['span']}。
 【你的身份】{n}，{self.age(n)}岁，{c['faction']}，{c['role']}，状态：{c['status']}，所在：{c['loc']}。{c['bio']}
 【性格与处境】{c['persona']}
 
-【天下大势】
+【{L['world']}】
 {self.world_brief(plain=True)}
 
 【近期公开发生的事】
 {self.recent(3, public=not soul)}
-{('【本季开局】' + self.world['director_public']) if self.world.get('director_public') else ''}
-{('【上季众人公开言论】' + chr(10) + speeches) if speeches else ''}
+{(f"【本{L['unit']}开局】" + self.world['director_public']) if self.world.get('director_public') else ''}
+{(f"【上{L['unit']}众人公开言论】" + chr(10) + speeches) if speeches else ''}
 
 【你私下记得的事】{'；'.join(c['memory'][-8:]) or '无'}
 【你收到的密信】
 {inbox}
 【你对他人的好恶（-100敌视…100亲信）】{rels or '无'}
 
-规则：只依据你这个身份能知道的信息行事；想事情、说话都用这个人物在那个年代会用的说法，不要出现“粮40”“民心60”这类数值；可以说谎、试探、结盟、背叛、拖延，一切以此人真实会有的考量为准。行动要具体可执行，本季只做一件主要的事。人物名必须用以下名单中的：{'、'.join(self.known())}。
+规则：只依据你这个身份能知道的信息行事；想事情、说话都用这个人物在那个年代会用的说法，不要出现“{L['food']}40”“{L['morale']}60”这类数值；可以说谎、试探、结盟、背叛、拖延，一切以此人真实会有的考量为准。行动要具体可执行，本{L['unit']}只做一件主要的事。人物名必须用以下名单中的：{'、'.join(self.known())}。
+{self.cfg.get('brief_rule', '')}
 
 输出一个JSON对象（只写JSON，不要其他文字）：
-{{"thought":"第一人称内心盘算，150-300字：你如何解读局势、揣测谁在想什么、权衡几种选择、为何选这一步","action":{{"type":"内政|军事|外交|谋略|人事|密信|观望 之一","target":"目标人物/城池/势力","detail":"具体做法，60字内"}},"public_speech":"在朝堂或军中公开说的话，可为空字符串","secret_letters":[{{"to":"人物名","content":"密信内容，80字内"}}],"memory":"本季想记住的要点，30字内"}}
+{{"thought":"第一人称内心盘算，150-300字：你如何解读局势、揣测谁在想什么、权衡几种选择、为何选这一步","action":{{"type":"{types} 之一","target":"目标人物/{L['city']}/势力","detail":"具体做法，60字内"}},"public_speech":"{self.cfg.get('speech_hint', '在朝堂或军中公开说的话')}，可为空字符串","secret_letters":[{{"to":"人物名","content":"密信内容，80字内"}}],"memory":"本{L['unit']}想记住的要点，30字内"}}
 """
 
     def judge_brief(self, agents, acts):
+        L, U = self.L, self.L["unit"]
         chars = "\n".join(
             f"{n}|{c['faction']}|{self.age(n)}岁|{c['role']}|{c['status']}|在{c['loc']}｜{c.get('hist') or ''}"
+            + (f"｜底牌（原话是对本人说的）：{c['secret']}" if c.get("secret") else "")
             for n in self.known() for c in [self.chars[n]])
         pool = "\n".join(
             f"{n}|{c['faction']}|{self.age(n)}岁|{c['bio']}｜史载约{c['debut']}年登上舞台｜{c.get('hist') or ''}"
+            + (f"｜底牌：{c['secret']}" if c.get("secret") else "")
             for n in self.cfg["order"] for c in [self.chars[n]] if c["status"] == "未出场") or "无"
         mail = "、".join(f"{n}（{len(self.chars[n]['inbox'])}封）" for n in self.alive() if self.chars[n]["inbox"]) or "无"
         cur = self.world["turn"]
@@ -200,13 +240,13 @@ class Sim:
             if x.get("major"):
                 return "全书主钩子，终局前回收"
             left = x["since"] + LIMIT - now
-            return "已超期，本季必须了结" if left <= 0 else f"还剩{left}季须了结"
+            return f"已超期，本{U}必须了结" if left <= 0 else f"还剩{left}{U}须了结"
         threads = "\n".join(
-            f"#{x['id']} {x['title']}（第{x['since']}季起，{due(x)}，已{now - 1 - x['last']}季无进展）：{x['detail']}" + (f"［相关：{'、'.join(x['actors'])}］" if x.get("actors") else "")
+            f"#{x['id']} {x['title']}（第{x['since']}{U}起，{due(x)}，已{now - 1 - x['last']}{U}无进展）：{x['detail']}" + (f"［相关：{'、'.join(x['actors'])}］" if x.get("actors") else "")
             for x in sorted(self.world.get("threads") or [], key=lambda x: (bool(x.get("major")), x["since"]))) or "无"
         n_major = sum(1 for x in self.world.get("threads") or [] if x.get("major"))
         la = self.last_acted()
-        idle = "、".join(f"{n}（{'从未' if n not in la else f'{now - 1 - la[n]}季'}）" for n in self.alive()
+        idle = "、".join(f"{n}（{'从未' if n not in la else f'{now - 1 - la[n]}{U}'}）" for n in self.alive()
                          if now - 1 - la.get(n, 0) >= 4) or "无"
         blocks = []
         for a in acts:
@@ -217,56 +257,61 @@ class Sim:
         director = self.world.get("director", "").strip()
         END = self.cfg.get("end_turn", 40)
         R = self.cfg["rules"]
-        return f"""你是一场三国架空历史推演的“天道”裁判。前提：{self.cfg['premise']}
-现在是{d['main']}（{d['sub']}）。请裁定这一季（三个月）众人行动的结果。
+        fill = lambda s: s.replace("{END}", str(END)).replace("{now}", str(now)).replace("{half}", str(END // 2))
+        leads = "、".join(self.always())
+        highlight = fill(R.get("highlight") or f"8. 爽点每{U}都要有：至少一个让读者拍案的高光时刻，优先给男主{self.cfg['leads']['male']}。高光要靠众人行动里的谋划挣来，写清因果；同一{U}对手也可以有自己的胜利，主角照样会挨打。")
+        pace = fill(R.get("pace") or "")
+        owners = "|".join(self.cfg["factions"])
+        return f"""你是一场{L['genre']}的“天道”裁判。前提：{self.cfg['premise']}
+现在是{d['main']}（{d['sub']}）。请裁定这一{U}（{L['span']}）众人行动的结果。
 
-要求：依据历史常识、兵力粮草、地理、人物能力与性格判断成败，有因果、有代价，不偏袒任何一方；行动之间会相互影响（密信可能被截获、谋略可能被识破）。这份记录要写成小说，所以“公正”不等于“温吞”：
-1. 每季至少裁出一场分出胜负的正面冲突（战场、朝堂或谋略），有明确的赢家和代价，不要各自退兵、不了了之。
-2. 每三四季至少一次大转折：城池易手、重要人物死亡、叛变或下狱、秘密险些曝光。距上次大转折已三季以上的，本季就要安排。
+要求：依据{R.get('basis', '历史常识、兵力粮草、地理、人物能力与性格')}判断成败，有因果、有代价，不偏袒任何一方；行动之间会相互影响（密信可能被截获、谋略可能被识破）。这份记录要写成小说，所以“公正”不等于“温吞”：
+1. 每{U}至少裁出一场分出胜负的正面冲突，有明确的赢家和代价，不要各自退缩、不了了之。
+2. 每三四{U}至少一次大转折：{R.get('twist', '城池易手、重要人物死亡、叛变或下狱、秘密险些曝光')}。距上次大转折已三{U}以上的，本{U}就要安排。
 3. 谋划周密又抓住时机的一方，给足回报（大胜而不是小胜）；冒进、失算的一方要付出沉重代价。主角也会挨重拳。
 {R['secret']}
-5. 各方都按兵不动时，用天灾、叛乱、意外死亡、内奸等外部变数打破僵局；年老者可能病故，但要合理。
+5. 各方都按兵不动时，用意外死亡、内奸、外部大事等变数打破僵局，但要合理。
 {R['leads']}
 7. 伏笔要回收：优先让已铺垫的线索结出果子，不要只开新坑。
-8. 爽点每季都要有：至少一个让读者拍案的高光时刻，优先给男主刘禅（智斗胜出、当众打脸、以少胜多、反将一军、识破杀局），也可以给女主或蜀方将相。高光要靠众人行动里的谋划挣来，写清因果；同一季对手也可以有自己的胜利，主角照样会挨打。
-9. 节奏要紧凑，大势要推进：这部书要一路写到三国乱世终结（天下一统或格局彻底定型），计划在第{END}季前后收官，现在是第{now}季。每季局面都要有实质变化，不要来回拉锯；越接近收官，越要推动灭国之战、都城易手、君主更替这类决定性事件。疆域要真的动起来：城池易手一律写进 city_changes，进入后半程（过了第{END // 2}季）每季至少有一座城池易主。天子改元或换朝时，在 JSON 里加上 "era":{{"name":"新年号","base":新年号元年减一的公元年}}。乱世真正终结的那一季，在 JSON 里加上 "ending":"终局说明，100字内"，并了结全部线索。
-summary 与 events 用史书或小说的笔法，不要出现“粮40”“民心60”这类数值。
+{highlight}
+{pace}
+summary 与 events 用史书或小说的笔法，不要出现“{L['food']}40”“{L['morale']}60”这类数值。
 
-【人物（姓名|势力|年龄|职位|状态|所在｜史实走向，仅供你参考）】
+【人物（姓名|阵营|年龄|身份|状态|所在｜史实走向，仅供你参考｜底牌，只有本人和你知道）】
 {chars}
 
 【候场人物（尚未登场）】
 {pool}
 
-【天下大势】
+【{L['world']}】
 {self.world_brief()}
 
-【近四季回顾】
+【近四{U}回顾】
 {self.recent(4)}
 
-【本季登场人物】{'、'.join(agents)}
+【本{U}登场人物】{'、'.join(agents)}
 
-【本季众人行动】
+【本{U}众人行动】
 {chr(10).join(blocks)}
-{('【天命干预：本季必须发生并据此推演】' + director) if director else ''}
+{(f'【天命干预：本{U}必须发生并据此推演】' + director) if director else ''}
 
 【登场名单与人物进退】
-- 历史已因{R['change']}而改变，史实走向只是参考：寿数将尽者可能如期病故，也可能因剧情而早逝或延年；因人事而死者（如被杀）要看本推演中的局势是否还会走到那一步。
+- 历史已因{R['change']}而改变，史实走向只是参考：因人事而死者（如被杀）要看本推演中的局势是否还会走到那一步。
 - 候场人物到了史载的时候，或剧情需要时，用 debuts 安排登场（同样可让“退场”者重新登场）。剧情暂时不需要、但仍在世的人，在 character_changes 里把状态设为“退场”；死亡用相应状态。
 【悬而未决的线索】（按搁置时间排序，最久的在前）
 {threads}
-- 伏笔要按时回收，读者才不会迷惑：普通线索从开出到了结不得超过 8 季；“还剩 2 季”以内的要推向结局，“已超期”的本季必须了结，并写明结局。每季至少了结一条，同时开出的新线索不得多于了结的数量加一。
+- 伏笔要按时回收，读者才不会迷惑：普通线索从开出到了结不得超过 8 {U}；“还剩 2 {U}”以内的要推向结局，“已超期”的本{U}必须了结，并写明结局。每{U}至少了结一条，同时开出的新线索不得多于了结的数量加一。
 - 只有全书级的重大反转或主钩子（如{R['hook']}）可以登记为 major，长期保留，目前已有 {n_major} 条，全书最多 3 条；它们也要在全书高潮时回收，不能不了了之。已有线索可在 update 里加 "major": true 升格。
-- 已搁置 4 季以上没有进展的，本季必须有下文。用 threads.update 记进展，threads.close 了结并写明结局。
-- 本季新出现、但三个月内办不完的事（请命未批、叛乱未平、密谋未发、承诺未兑现等），用 threads.open 登记，免得日后被遗忘。
-- 久未亲自思考的人物（4 季以上）：{idle}。他们的处境同样在变化，可在背景中交代，必要时点名登场。
+- 已搁置 4 {U}以上没有进展的，本{U}必须有下文。用 threads.update 记进展，threads.close 了结并写明结局。
+- 本{U}新出现、但{L['span']}内办不完的事（请示未批、审查未结、密谋未发、承诺未兑现等），用 threads.open 登记，免得日后被遗忘。
+- 久未亲自思考的人物（4 {U}以上）：{idle}。他们的处境同样在变化，可在背景中交代，必要时点名登场。
 
-- 用 next_cast 点名下一季需要独立思考的人：身处事件中心、刚收到密信、局势骤变、或即将做出关键抉择者，一般 4-9 人；刘禅每季必定登场，无需列出。其余人物下一季照常行事、由你在背景中裁定。目前持有未拆密信者：{mail}
-- 密信积压两季以上未拆的：{overdue}。本季要么点名让收信人登场，要么在背景中交代他如何处置这些信。
+- 用 next_cast 点名下一{U}需要独立思考的人：身处事件中心、刚收到密信、局势骤变、或即将做出关键抉择者，一般 4-9 人；{leads}每{U}必定登场，无需列出。其余人物下一{U}照常行事、由你在背景中裁定。目前持有未拆密信者：{mail}
+- 密信积压两{U}以上未拆的：{overdue}。本{U}要么点名让收信人登场，要么在背景中交代他如何处置这些信。
 
 输出一个JSON对象（只写JSON）：
-{{"summary":"本季大事记，史书笔法，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"城名(仅限已有城池：{'、'.join(self.world['cities'])})","owner":"蜀|魏|吴","troops":整数万}}],"faction_changes":[{{"faction":"蜀|魏|吴","food":增减整数,"morale":增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(STATUSES)}","role":"新职位或留空","loc":"所在城池或留空","faction":"若改投他国则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}],"debuts":[{{"name":"候场或退场人物","role":"职位","loc":"所在城池","why":"登场缘由，30字内"}}],"next_cast":[{{"name":"人物","why":"下季为何要他亲自思考，20字内"}}],"threads":{{"open":[{{"title":"十字内","detail":"来龙去脉，80字内","actors":["人物"],"major":false}}],"update":[{{"id":编号,"detail":"新进展，60字内","major":false}}],"close":[{{"id":编号,"outcome":"结局，60字内"}}]}}}}
-events 3-6条；只列出有变化的城池、关系和人物；被截获的密信不会送达收信人，而会被截获者得知。
+{{"summary":"本{U}大事记，150-250字","events":[{{"title":"四字以内地名或事名","text":"一两句话","actors":["人物名"]}}],"city_changes":[{{"city":"{L['city']}名(仅限已有：{'、'.join(self.world['cities'])})","owner":"{owners}","troops":整数}}],"faction_changes":[{{"faction":"{owners}","food":{L['food']}增减整数,"morale":{L['morale']}增减整数}}],"relation_changes":[{{"a":"人物","b":"人物","delta":-40到40的整数,"reason":"简述"}}],"character_changes":[{{"name":"人物","status":"{'|'.join(self.statuses)}","role":"新身份或留空","loc":"所在{L['city']}或留空","faction":"若改换阵营则填，否则留空"}}],"knowledge":[{{"name":"人物","learns":"此人私下得知的信息，40字内"}}],"intercepted_letters":[{{"from":"写信人","to":"收信人","by":"截获者"}}],"debuts":[{{"name":"候场或退场人物","role":"身份","loc":"所在{L['city']}","why":"登场缘由，30字内"}}],"next_cast":[{{"name":"人物","why":"下{U}为何要他亲自思考，20字内"}}],"threads":{{"open":[{{"title":"十字内","detail":"来龙去脉，80字内","actors":["人物"],"major":false}}],"update":[{{"id":编号,"detail":"新进展，60字内","major":false}}],"close":[{{"id":编号,"outcome":"结局，60字内"}}]}}}}
+events 3-6条；只列出有变化的{L['city']}、关系和人物；被截获的密信不会送达收信人，而会被截获者得知。{R.get('json_note', '')}
 """
 
     # ---------- 落地 ----------
@@ -374,7 +419,7 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             c["memory"] = c["memory"][-14:]
         entry = {
             "turn": self.world["turn"] + 1, "date": self.date(),
-            "summary": str(J.get("summary") or "本季无大事。"),
+            "summary": str(J.get("summary") or f"本{self.L['unit']}无大事。"),
             "events": [{"title": str(e.get("title", "")), "text": str(e.get("text", ""))} for e in (J.get("events") or [])[:8]],
             "director": self.world.get("director", ""), "changed": changed, "acts": acts,
             "before": before, "after": self.snapshot(),
@@ -390,14 +435,20 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         self.world["director_public"] = ""
         self.world["director_cast"] = []
         self.world["turn"] += 1
-        self.world["season"] += 1
-        if self.world["season"] > 3:
-            self.world["season"] = 0; self.world["year"] += 1
+        if self.monthly:
+            self.world["month"] += 1
+            if self.world["month"] > 12:
+                self.world["month"] = 1; self.world["year"] += 1
+        else:
+            self.world["season"] += 1
+            if self.world["season"] > 3:
+                self.world["season"] = 0; self.world["year"] += 1
         self.save()
         return entry
 
     def turn_md(self, t):
-        prefix = "序幕 · " if t["turn"] == 0 else "第%d季 · " % t["turn"]
+        U = self.L["unit"]
+        prefix = "序幕 · " if t["turn"] == 0 else f"第{t['turn']}{U} · "
         L = [f"## {prefix}{t['date']['main']}（{t['date']['sub']}）", ""]
         if t.get("director"):
             L += [f"> 天命干预：{t['director']}", ""]
@@ -415,7 +466,7 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         if th.get("opened"):
             L += ["", "新线索：" + "、".join(x["title"] for x in th["opened"])]
         if t.get("next_cast"):
-            L += ["", "下季登场：" + "、".join(d["name"] for d in t["next_cast"])]
+            L += ["", f"下{U}登场：" + "、".join(d["name"] for d in t["next_cast"])]
         if t.get("acts"):
             L += ["", "### 众人心思与行动", ""]
             for a in t["acts"]:
@@ -430,7 +481,10 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
         return "\n".join(L) + "\n"
 
     def write_turn_md(self, t):
-        fn = p("chronicle", f"{t['turn']:04d}-{t['date']['sub'].replace('公元 ', '').replace(' 年', '')}{t['date']['main'][-1]}.md")
+        y = t['date']['sub'].replace('公元 ', '').replace(' 年', '')
+        tick = t['date']['main'].split(" · ")[-1]
+        tick = f"-{MONTHS.index(tick):02d}" if tick in MONTHS else tick
+        fn = p("chronicle", f"{t['turn']:04d}-{y}{tick}.md")
         with open(fn, "w", encoding="utf-8") as f:
             f.write(self.turn_md(t))
 
@@ -460,6 +514,8 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
                 try:
                     log = json.loads(git("show", f"{b}:chronicle/log.json").stdout)
                     world = json.loads(git("show", f"{b}:sim/world.json").stdout)
+                    if json.loads(git("show", f"{b}:sim/config.json").stdout).get("era") != self.cfg.get("era"):
+                        continue  # 别的时代，不放在一起比
                 except ValueError:
                     continue
                 chars = {}
@@ -494,7 +550,7 @@ events 3-6条；只列出有变化的城池、关系和人物；被截获的密�
             f.write("window.SIM = " + json.dumps(data, ensure_ascii=False) + ";\n")
 
 
-def load_act(name, path, order):
+def load_act(name, path, order, types=ACTION_TYPES):
     try:
         r = rj(path)
     except Exception as e:
@@ -502,7 +558,7 @@ def load_act(name, path, order):
     if not isinstance(r, dict):
         return None, f"{path} 顶层必须是对象"
     act = r.get("action") if isinstance(r.get("action"), dict) else {}
-    if act.get("type") not in ACTION_TYPES:
+    if act.get("type") not in types:
         act["type"] = "观望" if not act.get("type") else str(act["type"])[:4]
     letters = []
     for l in r.get("secret_letters") or []:
@@ -538,12 +594,13 @@ def main():
 
     if a.cmd == "status":
         d = S.date()
-        print(f"第 {S.world['turn']} 季已完成；下一季：{d['main']}（{d['sub']}）")
+        U = S.L["unit"]
+        print(f"第 {S.world['turn']} {U}已完成；下一{U}：{d['main']}（{d['sub']}）")
         print(S.world_brief())
         if S.world.get("director"): print("待生效天命干预：" + S.world["director"])
         dead = [n for n in S.cfg["order"] if DEAD.search(S.chars[n]["status"])]
         if dead: print("已故：" + "、".join(dead))
-        if S.world.get("cast"): print("天道点名下季登场：" + "、".join(S.world["cast"]))
+        if S.world.get("cast"): print(f"天道点名下{U}登场：" + "、".join(S.world["cast"]))
     elif a.cmd == "pick":
         os.makedirs(WORK, exist_ok=True)
         for f in glob.glob(os.path.join(WORK, "*")):
@@ -562,7 +619,7 @@ def main():
             path = os.path.join(WORK, f"act-{n}.json")
             if not os.path.exists(path):
                 errs.append(f"缺少 {path}"); continue
-            r, e = load_act(n, path, S.known())
+            r, e = load_act(n, path, S.known(), S.action_types)
             if e: errs.append(e)
             else: acts.append(r)
         if errs:
@@ -582,7 +639,7 @@ def main():
         t = S.apply(agents, acts, J)
         shutil.rmtree(WORK, ignore_errors=True)
         first = re.split("[。；]", t["summary"])[0][:60]
-        print(f"COMMIT_MSG: 第{t['turn']}季 {t['date']['main']}：{first}")
+        print(f"COMMIT_MSG: 第{t['turn']}{S.L['unit']} {t['date']['main']}：{first}")
         print(t["summary"])
         if t["changed"]: print("变动城池：" + "、".join(t["changed"]))
     elif a.cmd == "thread":

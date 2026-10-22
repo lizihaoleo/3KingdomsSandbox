@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>季汉推演</title>
+<title>孤岛</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -243,18 +243,18 @@ table.cmp td:first-child{font-family:var(--f-serif)}
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <h1>季汉推演</h1>
+      <h1 id="brand">季汉推演</h1>
       <div class="when"><b id="date"></b><span id="when-sub"></span></div>
     </div>
     <div class="cmds">
-      <button class="btn primary" type="button" data-cmd="/turn">推演一季</button>
-      <button class="btn" type="button" data-cmd="/turn 4">连推一年</button>
+      <button class="btn primary" type="button" data-cmd="/turn" id="btn-one">推演一季</button>
+      <button class="btn" type="button" data-cmd="/turn 4" id="btn-many">连推一年</button>
       <button class="btn" type="button" id="decree-toggle" aria-expanded="false" aria-controls="decree">天命干预</button>
       <button class="btn" type="button" data-cmd="/outline">整理成大纲</button>
     </div>
   </header>
   <form class="decree" id="decree" hidden>
-    <label for="decree-text">下一季的天命</label>
+    <label for="decree-text" id="decree-label">下一季的天命</label>
     <input id="decree-text" type="text" placeholder="如：魏延在褒斜道截住了杨仪" autocomplete="off">
     <button class="btn primary" type="submit">复制命令</button>
     <span class="hint" id="decree-now"></span>
@@ -274,7 +274,7 @@ table.cmp td:first-child{font-family:var(--f-serif)}
     <div class="cols">
       <div class="col-main">
         <section class="card">
-          <div class="card-h"><h2>天下舆图</h2><span>圆大小为驻军（万）· 金圈为本季易手 · 拖动平移，滚轮或按钮缩放</span></div>
+          <div class="card-h"><h2 id="map-title">天下舆图</h2><span id="map-note">圆大小为驻军（万）· 金圈为本季易手 · 拖动平移，滚轮或按钮缩放</span></div>
           <div class="map" id="map">
             <div class="ctl">
               <button type="button" id="zin" aria-label="放大">+</button>
@@ -283,10 +283,10 @@ table.cmp td:first-child{font-family:var(--f-serif)}
             </div>
             <div class="cityinfo" id="cityinfo"></div>
           </div>
-          <div class="legend"><span><i style="background:var(--m-shu)"></i>蜀汉</span><span><i style="background:var(--m-wei)"></i>曹魏</span><span><i style="background:var(--m-wu)"></i>孙吴</span><span>浅色为三国疆域外诸部</span></div>
+          <div class="legend" id="legend"><span><i style="background:var(--m-shu)"></i>蜀汉</span><span><i style="background:var(--m-wei)"></i>曹魏</span><span><i style="background:var(--m-wu)"></i>孙吴</span><span>浅色为三国疆域外诸部</span></div>
         </section>
         <section class="card">
-          <div class="card-h"><h2>群臣</h2><span>金框为本季登场 · “下季”为天道点名 · 红点为有未拆密信</span></div>
+          <div class="card-h"><h2 id="court-title">群臣</h2><span id="court-note">金框为本季登场 · “下季”为天道点名 · 红点为有未拆密信</span></div>
           <div class="court" id="court"></div>
           <div id="court-more"></div>
         </section>
@@ -318,8 +318,14 @@ table.cmp td:first-child{font-family:var(--f-serif)}
 if(!window.SIM){document.body.innerHTML='<p style="padding:24px">找不到 data.js。请先在项目里运行 <code>python3 tools/sim.py build-viewer</code>。</p>';throw 0}
 const SIM=window.SIM, CFG=SIM.cfg, W=SIM.world, LOG=SIM.log, CHARS=SIM.chars;
 const FACTIONS=CFG.factions, ORDER=CFG.order;
-const COL={蜀:"var(--shu)",魏:"var(--wei)",吴:"var(--wu)"};
-const DEAD=/阵亡|病故|被杀|赐死|遇害|自尽|身故/;
+// 用语与配色随配置换时代；没配的沿用三国线
+const LB=Object.assign({unit:"季",city:"城池",troops:"驻军",troop_unit:"万",food:"粮",morale:"民心",genre:"三国历史推演"},CFG.labels||{}),U=LB.unit;
+const COL=CFG.colors?Object.fromEntries(FACTIONS.map(f=>[f,CFG.colors[f][0]])):{蜀:"var(--shu)",魏:"var(--wei)",吴:"var(--wu)"};
+const MCOL=CFG.colors?Object.fromEntries(FACTIONS.map(f=>[f,CFG.colors[f][1]])):{蜀:"var(--m-shu)",魏:"var(--m-wei)",吴:"var(--m-wu)"};
+const FNAME=f=>(CFG.faction_names||{})[f]||({蜀:"蜀汉",魏:"曹魏",吴:"孙吴"})[f]||f;
+const SC=CFG.labels?LB.city:"城",ST=CFG.labels?LB.troops:"兵";
+const LEADS=CFG.always||[(CFG.leads||{}).male].filter(Boolean);
+const DEAD=/阵亡|病故|被杀|赐死|遇害|自尽|身故|牺牲|处决|遇刺/;
 const SEASONS=["春","夏","秋","冬"];
 const $=id=>document.getElementById(id);
 const put=(node,...k)=>node.replaceChildren(...k.flat(Infinity).filter(x=>x!=null&&x!==false));
@@ -333,11 +339,11 @@ const offstage=n=>["未出场","退场"].includes(CHARS[n].status);
 const onStage=n=>!isDead(n)&&!offstage(n);
 const NEXT=new Set(W.cast||[]);
 const sgn=v=>(v>0?"+":v<0?"−":"")+Math.abs(v);
-const turnLabel=t=>t.turn===0?"序幕":`第 ${t.turn} 季`;
+const turnLabel=t=>t.turn===0?"序幕":`第 ${t.turn} ${U}`;
 const latest=LOG.at(-1)||null;
 const appeared=new Set((latest?.acts||[]).map(a=>a.name));
 
-let selected="刘禅", ptab="intro", chronIdx=LOG.length-1, actsIdx=LOG.length-1, selCity=CHARS["刘禅"]?.loc||"成都";
+let selected=LEADS[0]||ORDER[0], ptab="intro", chronIdx=LOG.length-1, actsIdx=LOG.length-1, selCity=CHARS[selected]?.loc||Object.keys(CFG.cities)[0];
 for(let i=LOG.length-1;i>=0;i--){if(LOG[i].acts?.length){actsIdx=i;break}}
 
 /* ---------- 复制命令 ---------- */
@@ -355,8 +361,14 @@ $("decree-now").textContent=W.director?`当前已设：${W.director}（留空提
 
 /* ---------- 顶部 ---------- */
 function renderTop(){
-  $("date").textContent=`${(W.era||CFG.era).name}${W.year-(W.era||CFG.era).base===1?"元":cn(W.year-(W.era||CFG.era).base)}年 · ${SEASONS[W.season]}`;
-  put($("when-sub"),`已推演 ${W.turn} 季 · 公元 ${W.year} 年 · 分支 `,el("em",{},SIM.branch||"未知"),W.director?` · 下一季天命：${W.director}`:"");
+  const name=(CFG.title||"季汉推演").split(" · ")[0];
+  document.title=name;$("brand").textContent=name;
+  $("date").textContent=SIM.date?.main||`${(W.era||CFG.era).name}${W.year-(W.era||CFG.era).base===1?"元":cn(W.year-(W.era||CFG.era).base)}年 · ${SEASONS[W.season]}`;
+  put($("when-sub"),`已推演 ${W.turn} ${U} · 公元 ${W.year} 年 · 分支 `,el("em",{},SIM.branch||"未知"),W.director?` · 下一${U}天命：${W.director}`:"");
+  $("btn-one").textContent=`推演一${U}`;
+  const many=U==="季"?4:3;$("btn-many").dataset.cmd=`/turn ${many}`;$("btn-many").textContent=U==="季"?"连推一年":`连推${cn(many)}${U}`;
+  $("decree-label").textContent=`下一${U}的天命`;
+  if(CFG.decree_hint)$("decree-text").placeholder=CFG.decree_hint;
 }
 function factionStats(cities,factions,f){const own=Object.values(cities).filter(c=>c.owner===f);return{cities:own.length,troops:own.reduce((a,c)=>a+c.troops,0),food:factions[f].food,morale:factions[f].morale}}
 function renderFacts(){
@@ -364,16 +376,18 @@ function renderFacts(){
     const s=factionStats(W.cities,W.factions,f);
     let trend="",tc="var(--muted)";
     if(latest?.before){const b=factionStats(latest.before.cities,latest.before.factions,f);
-      const parts=[["城",s.cities-b.cities],["兵",s.troops-b.troops],["粮",s.food-b.food],["民心",s.morale-b.morale]].filter(([,d])=>d);
+      const parts=[[SC,s.cities-b.cities],[ST,s.troops-b.troops],[LB.food,s.food-b.food],[LB.morale,s.morale-b.morale]].filter(([,d])=>d);
       trend=parts.length?parts.slice(0,2).map(([k,d])=>`${k} ${sgn(d)}`).join(" · "):"持平";
       const score=parts.reduce((a,[,d])=>a+Math.sign(d),0);tc=score>0?"var(--good)":score<0?"var(--bad)":"var(--muted)"}
     return el("div",{class:"fact"},el("span",{class:"nm",style:`color:${COL[f]}`},f),
-      el("span",{},"城 ",el("b",{},s.cities)),el("span",{},"兵 ",el("b",{},s.troops)," 万"),el("span",{},"粮 ",el("b",{},s.food)),el("span",{},"民心 ",el("b",{},s.morale)),
+      el("span",{},SC+" ",el("b",{},s.cities)),el("span",{},ST+" ",el("b",{},s.troops),LB.troop_unit?" "+LB.troop_unit:""),el("span",{},LB.food+" ",el("b",{},s.food)),el("span",{},LB.morale+" ",el("b",{},s.morale)),
       trend?el("span",{class:"trend",style:`color:${tc}`},trend):null)}));
 }
 
 /* ---------- 舆图 ---------- */
-const LON0=97,LAT0=42.5,K=40,KY=48,MW=1100,MH=1152;
+// 配置里有 map 就画这张图（如上海），否则画三国古地图
+const MAPC=CFG.map||null,PJ=MAPC?.proj||{lon0:97,lat0:42.5,k:40,ky:48,w:1100,h:1152};
+const LON0=PJ.lon0,LAT0=PJ.lat0,K=PJ.k,KY=PJ.ky,MW=PJ.w,MH=PJ.h;
 const P=(lon,lat)=>[(lon-LON0)*K,(LAT0-lat)*KY];
 const f1=n=>n.toFixed(1);
 function smooth(pts,closed){
@@ -409,17 +423,18 @@ const FOREIGN=[["鲜　卑",113.4,41.7],["羌",99.6,33.4],["胡",108.7,39.4],["�
 const SEAS=[["渤海",119.9,38.6],["大　海",123.0,34.6],["东　海",123.2,29.6],["南　海",114.4,20.9]];
 const MTNS=[["秦　岭",109.6,33.6],["巴　山",106.9,31.9],["太　行",113.6,37.0],["祁　连",100.0,38.0],["大　别",115.6,31.3],["南　岭",112.6,25.2]];
 // 疆域着色的锚点：城池之外的郡治，随就近城池易手
-const ANCHORS=[[98.5,39.7,"武威"],[100.4,38.9,"武威"],[118.3,26.1,"会稽"],[109.8,19.2,"番禺"],[108.3,22.8,"番禺"],[110.3,25.3,"零陵"],[115,26,"豫章"]];
-const CAPITALS={蜀:"成都",魏:"洛阳",吴:"建业"};
-const LABEL_DIR={天水:"up",陇西:"left",武都:"left",阴平:"left",五丈原:"up",洛阳:"up",寿春:"up",合肥:"down",剑阁:"left",上庸:"left",江陵:"down",西陵:"up",永安:"left",武昌:"down",宛:"up",汝南:"left",襄平:"left"};
+const ANCHORS=MAPC?[]:[[98.5,39.7,"武威"],[100.4,38.9,"武威"],[118.3,26.1,"会稽"],[109.8,19.2,"番禺"],[108.3,22.8,"番禺"],[110.3,25.3,"零陵"],[115,26,"豫章"]];
+const CAPITALS=MAPC?.capitals||{蜀:"成都",魏:"洛阳",吴:"建业"};
+const LABEL_DIR=MAPC?.label_dir||{天水:"up",陇西:"left",武都:"left",阴平:"left",五丈原:"up",洛阳:"up",寿春:"up",合肥:"down",剑阁:"left",上庸:"left",江陵:"down",西陵:"up",永安:"left",武昌:"down",宛:"up",汝南:"left",襄平:"left"};
 const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
 function hex(c){c=c.replace("#","");return[0,2,4].map(i=>parseInt(c.slice(i,i+2),16))}
 
 function territoryImage(){
   const S=.5,w=MW*S|0,h=MH*S|0,cv=document.createElement("canvas");cv.width=w;cv.height=h;
   const ctx=cv.getContext("2d"),img=ctx.createImageData(w,h),own=new Uint8Array(w*h);
-  const fc={蜀:hex(css("--m-shu")),魏:hex(css("--m-wei")),吴:hex(css("--m-wu"))};
-  const seeds=[...Object.entries(CFG.cities).map(([k,[lo,la]])=>[...P(lo,la),FACTIONS.indexOf(W.cities[k].owner)]),
+  const fc=CFG.colors?Object.fromEntries(FACTIONS.map(f=>[f,hex(CFG.colors[f][1])])):{蜀:hex(css("--m-shu")),魏:hex(css("--m-wei")),吴:hex(css("--m-wu"))};
+  const far=new Set(MAPC?.far||[]);
+  const seeds=[...Object.entries(CFG.cities).filter(([k])=>!far.has(k)).map(([k,[lo,la]])=>[...P(lo,la),FACTIONS.indexOf(W.cities[k].owner)]),
     ...ANCHORS.map(([lo,la,c])=>[...P(lo,la),FACTIONS.indexOf(W.cities[c].owner)])].map(([x,y,f])=>[x*S,y*S,f]);
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){let best=1e12,bf=0;for(const s of seeds){const dx=x-s[0],dy=y-s[1],d=dx*dx+dy*dy;if(d<best){best=d;bf=s[2]}}own[y*w+x]=bf}
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x,f=own[i],c=fc[FACTIONS[f]],o=i*4;
@@ -427,12 +442,12 @@ function territoryImage(){
     img.data[o]=c[0];img.data[o+1]=c[1];img.data[o+2]=c[2];img.data[o+3]=edge?235:78}
   ctx.putImageData(img,0,0);
   ctx.globalCompositeOperation="destination-in";ctx.scale(S,S);ctx.fillStyle="#000";
-  ctx.fill(new Path2D(smooth([...BORDER,...COAST],true)+smooth(HAINAN,true)));
+  ctx.fill(new Path2D(MAPC?"M"+MAPC.land.map(q=>P(...q).map(f1).join(",")).join("L")+"Z":smooth([...BORDER,...COAST],true)+smooth(HAINAN,true)));
   return cv.toDataURL();
 }
 
 const narrow=()=>matchMedia("(max-width:640px)").matches;
-const homeView=()=>narrow()?{cx:P(111.2,31)[0],cy:P(111.2,31)[1],w:560}:{cx:P(110.9,31.3)[0],cy:P(110.9,31.3)[1],w:930};
+const homeView=()=>{if(MAPC){const h=MAPC.home,[cx,cy]=P(h.lon,h.lat);return{cx,cy,w:narrow()?h.nw:h.w}}return narrow()?{cx:P(111.2,31)[0],cy:P(111.2,31)[1],w:560}:{cx:P(110.9,31.3)[0],cy:P(110.9,31.3)[1],w:930}};
 let vb={x:0,y:0,w:930,h:760},svgEl,homeW=930;
 function home(){const h=homeView();homeW=h.w;vb.w=h.w;setVB(true);vb.x=h.cx-vb.w/2;vb.y=h.cy-vb.h/2;setVB()}
 function setVB(sizeOnly){
@@ -445,10 +460,23 @@ function setVB(sizeOnly){
 function zoom(f,cx,cy){cx??=vb.x+vb.w/2;cy??=vb.y+vb.h/2;const nw=Math.max(220,Math.min(MW,vb.w*f)),r=nw/vb.w;vb.x=cx-(cx-vb.x)*r;vb.y=cy-(cy-vb.y)*r;vb.w=nw;setVB()}
 function toMap(ev){const r=svgEl.getBoundingClientRect(),s=Math.max(r.width/vb.w,r.height/vb.h),ox=(r.width-vb.w*s)/2,oy=(r.height-vb.h*s)/2;return[vb.x+(ev.clientX-r.left-ox)/s,vb.y+(ev.clientY-r.top-oy)/s,s]}
 
+// 简图：陆地、左栏远方据点、河流、片区名
+function drawPlainMap(g){
+  const I=MAPC.inset;
+  if(I){const x0=P(I.lon0,LAT0)[0],x1=P(I.lon1,LAT0)[0],ys=(MAPC.far||[]).map(k=>P(...CFG.cities[k])[1]);
+    g.append(sv("rect",{x:-200,y:-200,width:x1+200,height:MH+400,fill:"var(--realm)"}));
+    g.append(sv("line",{x1,y1:-200,x2:x1,y2:MH+200,stroke:"#6b5a3a","stroke-width":2,"stroke-dasharray":"10 4 2 4"}));
+    g.append(sv("text",{class:"zhou",x:(x0+x1)/2,y:(ys.length?Math.min(...ys):MH/2)-45,"text-anchor":"middle"},I.title))}
+  for(const r of MAPC.rivers||[]){g.append(sv("path",{d:smooth(r.pts),fill:"none",stroke:"var(--sea)","stroke-width":r.w,"stroke-linecap":"round","stroke-linejoin":"round"}));
+    if(r.n){const[x,y]=P(...r.lbl);g.append(sv("text",{class:"water",x,y},r.n))}}
+  g.append(sv("image",{href:territoryImage(),x:0,y:0,width:MW,height:MH,preserveAspectRatio:"none"}));
+  for(const[t,lo,la]of MAPC.areas||[]){const[x,y]=P(lo,la);g.append(sv("text",{class:"foreign",x,y,"text-anchor":"middle"},t))}
+}
 function buildMap(){
-  svgEl=sv("svg",{role:"img","aria-label":"三国舆图：城池归属与驻军",preserveAspectRatio:"xMidYMid slice"});
+  svgEl=sv("svg",{role:"img","aria-label":`${MAPC?.title||"三国舆图"}：${LB.city}归属与${LB.troops}`,preserveAspectRatio:"xMidYMid slice"});
   const g=sv("g");svgEl.append(g);
   g.append(sv("rect",{x:-200,y:-200,width:MW+400,height:MH+400,fill:"var(--land)"}));
+  if(MAPC)drawPlainMap(g);else{
   g.append(sv("path",{d:smooth([[105.9,17.2],...COAST,[124.6,40.15],[126,40.2],[126,17.2]],false)+"Z",fill:"var(--sea)"}));
   g.append(sv("path",{d:smooth(TAIWAN,true),fill:"var(--land)",stroke:"#8a7a58","stroke-width":1}));
   g.append(sv("path",{d:smooth([...BORDER,...COAST],true),fill:"var(--realm)"}));
@@ -458,27 +486,27 @@ function buildMap(){
   g.append(sv("path",{d:smooth([[105.9,17.2],...COAST,[124.6,40.15]],false),fill:"none",stroke:"#5a7a84","stroke-width":1.4}));
   for(const[lo,la,rx,ry]of LAKES){const[x,y]=P(lo,la);g.append(sv("ellipse",{cx:x,cy:y,rx:rx*K,ry:ry*KY,fill:"var(--sea)",stroke:"var(--river)","stroke-width":1}))}
   for(const r of RIVERS){g.append(sv("path",{d:smooth(r.pts),fill:"none",stroke:"var(--river)","stroke-width":r.w,"stroke-linecap":"round","stroke-linejoin":"round",opacity:.9}));
-    if(r.n){const[x,y]=P(...r.lbl);g.append(sv("text",{class:"water",x,y},r.n))}}
+    if(r.n){const[x,y]=P(...r.lbl);g.append(sv("text",{class:"water",x,y},r.n))}}}
   for(const[a,b]of CFG.roads){const A=P(...CFG.cities[a]),B=P(...CFG.cities[b]);g.append(sv("line",{x1:A[0],y1:A[1],x2:B[0],y2:B[1],stroke:"var(--road)","stroke-width":1.4,"stroke-dasharray":"5 4",opacity:.8}))}
-  for(const[t,lo,la]of SEAS){const[x,y]=P(lo,la);g.append(sv("text",{class:"sealbl",x,y,"text-anchor":"middle"},t))}
-  for(const[t,lo,la]of ZHOU){const[x,y]=P(lo,la);g.append(sv("text",{class:"zhou",x,y,"text-anchor":"middle"},t))}
-  for(const[t,lo,la]of FOREIGN){const[x,y]=P(lo,la);g.append(sv("text",{class:"foreign",x,y,"text-anchor":"middle"},t))}
-  for(const[t,lo,la]of MTNS){const[x,y]=P(lo,la);g.append(sv("text",{class:"mtn",x,y,"text-anchor":"middle"},t))}
+  if(!MAPC)for(const[t,lo,la]of SEAS){const[x,y]=P(lo,la);g.append(sv("text",{class:"sealbl",x,y,"text-anchor":"middle"},t))}
+  if(!MAPC)for(const[t,lo,la]of ZHOU){const[x,y]=P(lo,la);g.append(sv("text",{class:"zhou",x,y,"text-anchor":"middle"},t))}
+  if(!MAPC)for(const[t,lo,la]of FOREIGN){const[x,y]=P(lo,la);g.append(sv("text",{class:"foreign",x,y,"text-anchor":"middle"},t))}
+  if(!MAPC)for(const[t,lo,la]of MTNS){const[x,y]=P(lo,la);g.append(sv("text",{class:"mtn",x,y,"text-anchor":"middle"},t))}
   const changed=new Set(latest?.changed||[]),capital=new Set(Object.values(CAPITALS));
   for(const k in CFG.cities){
-    const[x,y]=P(...CFG.cities[k]),c=W.cities[k],r=6+Math.sqrt(c.troops)*3.4,fv={蜀:"var(--m-shu)",魏:"var(--m-wei)",吴:"var(--m-wu)"}[c.owner];
+    const[x,y]=P(...CFG.cities[k]),c=W.cities[k],r=6+Math.sqrt(c.troops)*3.4,fv=MCOL[c.owner];
     const here=ORDER.filter(n=>CHARS[n].loc===k&&onStage(n));
     const cg=sv("g",{class:"city"+(k===selCity?" sel":""),"data-city":k});
     if(changed.has(k))cg.append(sv("circle",{cx:x,cy:y,r:r+6,fill:"none",stroke:"var(--gold)","stroke-width":3}));
     if(capital.has(k)&&CAPITALS[c.owner]===k)cg.append(sv("circle",{cx:x,cy:y,r:r+3,fill:"none",stroke:"var(--map-ink)","stroke-width":1.4}));
     cg.append(sv("circle",{class:"dot",cx:x,cy:y,r,fill:fv,stroke:"var(--map-ink)","stroke-width":1.6}));
-    const info=` ${c.troops}万`+(here.length?` · ${here.length}人`:""),d=LABEL_DIR[k]||"right",t=sv("text",{});
+    const info=` ${c.troops}${LB.troop_unit}`+(here.length?` · ${here.length}人`:""),d=LABEL_DIR[k]||"right",t=sv("text",{});
     t.append(k,sv("tspan",{class:"tr"},info));
     if(d==="left"){t.setAttribute("x",x-r-5);t.setAttribute("y",y+5);t.setAttribute("text-anchor","end")}
     else if(d==="up"){t.setAttribute("x",x);t.setAttribute("y",y-r-6);t.setAttribute("text-anchor","middle")}
     else if(d==="down"){t.setAttribute("x",x);t.setAttribute("y",y+r+16);t.setAttribute("text-anchor","middle")}
     else{t.setAttribute("x",x+r+5);t.setAttribute("y",y+5)}
-    cg.append(t,sv("title",{},`${k}：${c.owner}，驻军${c.troops}万`+(here.length?`；在此：${here.join("、")}`:"")));
+    cg.append(t,sv("title",{},`${k}：${c.owner}，${LB.troops}${c.troops}${LB.troop_unit}`+(here.length?`；在此：${here.join("、")}`:"")));
     g.append(cg);
   }
   $("map").prepend(svgEl);home();
@@ -496,7 +524,7 @@ function buildMap(){
 function pickCity(k){selCity=k;svgEl.querySelectorAll(".city").forEach(c=>c.classList.toggle("sel",c.dataset.city===k));renderCityInfo()}
 function renderCityInfo(){
   const k=selCity,c=W.cities[k],here=ORDER.filter(n=>CHARS[n].loc===k&&onStage(n));
-  put($("cityinfo"),el("h3",{},k,el("span",{class:"chip",style:`background:${COL[c.owner]}`},c.owner),el("span",{style:"font-family:var(--f-ui);font-size:12px;font-weight:400;color:var(--muted)"},`驻军 ${c.troops} 万`+(CAPITALS[c.owner]===k?" · 都城":""))),
+  put($("cityinfo"),el("h3",{},k,el("span",{class:"chip",style:`background:${COL[c.owner]}`},c.owner),el("span",{style:"font-family:var(--f-ui);font-size:12px;font-weight:400;color:var(--muted)"},`${LB.troops} ${c.troops}${LB.troop_unit?" "+LB.troop_unit:""}`+(CAPITALS[c.owner]===k?(MAPC?" · 大本营":" · 都城"):""))),
     here.length?el("div",{class:"who"},here.map(n=>el("button",{type:"button",onclick:()=>select(n,true)},n))):el("p",{class:"empty"},"城中无登场人物"));
 }
 
@@ -505,7 +533,7 @@ function courtBtn(n,onPick){const c=CHARS[n];
   return el("button",{type:"button",class:(appeared.has(n)?"on ":"")+(isDead(n)?"dead ":"")+(offstage(n)?"off":""),"aria-pressed":n===selected?"true":"false",onclick:onPick},
     el("span",{class:"n"},el("i",{style:`background:${COL[c.faction]}`}),el("b",{},n)),
     el("span",{class:"r"},offstage(n)?`${c.status==="未出场"?"候场":"退场"} · ${c.faction}`:isDead(n)?`${c.status} · ${c.faction}`:`${c.role} · ${c.loc}`),
-    NEXT.has(n)?el("span",{class:"next",title:"天道点名下季登场"},"下季"):null,
+    NEXT.has(n)?el("span",{class:"next",title:`天道点名下${U}登场`},`下${U}`):null,
     c.inbox?.length?el("span",{class:"mail",role:"img","aria-label":"有未拆密信"}):null)}
 function renderCourt(){
   const on=ORDER.filter(onStage),hidden=ORDER.length-on.length;
@@ -547,7 +575,7 @@ function renderPerson(){
     body=[el("p",{class:"intro"},c.intro||c.bio),
       T.length?[el("div",{class:"lbl"},"史实上的亲故"),el("div",{class:"ties"},T.map(([o,l,d])=>el("button",{type:"button",title:d||l,onclick:()=>select(o)},el("b",{},o),el("span",{},l))))]:null,
       el("button",{type:"button",class:"linkbtn",onclick:()=>{gFocus=n;go("graph")}},"在关系图里看他的人际网"),
-      c.hist?el("details",{class:"spoil"},el("summary",{},"真实历史上他后来怎样（剧透）"),el("p",{style:"margin:6px 0 0"},c.hist.replace(/^史实：/,""))):null];
+      c.hist?el("details",{class:"spoil"},el("summary",{},c.hist==="虚构人物。"?"虚构人物":"真实历史上他后来怎样（剧透）"),el("p",{style:"margin:6px 0 0"},c.hist.replace(/^史实：/,""))):null];
   }else if(ptab==="mind"){
     body=[el("div",{class:"lbl"},actT?`内心 · ${turnLabel(actT)} · ${actT.date.main}`:"内心"),
       c.thought?el("p",{class:"prose"},c.thought):el("p",{class:"empty"},"尚未登场推演。推演后这里是此人最近一次的真实盘算。")];
@@ -580,9 +608,9 @@ function renderChron(){
   const t=LOG[chronIdx];
   const head=el("div",{class:"card-h"},el("h2",{},"编年史"),
     el("div",{class:"pager"},
-      el("button",{type:"button","aria-label":"上一季",disabled:chronIdx<=0,onclick:()=>{chronIdx--;renderChron()}},"‹"),
-      el("select",{id:"chron-sel","aria-label":"选择季度",onchange:e=>{chronIdx=+e.target.value;renderChron()}},LOG.map((x,i)=>{const o=el("option",{value:i},`${turnLabel(x)} · ${x.date.main}`);if(i===chronIdx)o.selected=true;return o})),
-      el("button",{type:"button","aria-label":"下一季",disabled:chronIdx>=LOG.length-1,onclick:()=>{chronIdx++;renderChron()}},"›")));
+      el("button",{type:"button","aria-label":`上一${U}`,disabled:chronIdx<=0,onclick:()=>{chronIdx--;renderChron()}},"‹"),
+      el("select",{id:"chron-sel","aria-label":`选择第几${U}`,onchange:e=>{chronIdx=+e.target.value;renderChron()}},LOG.map((x,i)=>{const o=el("option",{value:i},`${turnLabel(x)} · ${x.date.main}`);if(i===chronIdx)o.selected=true;return o})),
+      el("button",{type:"button","aria-label":`下一${U}`,disabled:chronIdx>=LOG.length-1,onclick:()=>{chronIdx++;renderChron()}},"›")));
   if(!t){put($("chron"),head,el("p",{class:"empty"},"还没有记录。"));return}
   const n=t.acts?.length||0;
   put($("chron"),head,
@@ -592,17 +620,17 @@ function renderChron(){
     el("div",{class:"evs"},(t.events||[]).map(e=>el("div",{class:"ev"},el("b",{},e.title),el("span",{},e.text)))),
     t.debuts?.length?el("p",{class:"cast"},el("b",{},"登场"),t.debuts.map(d=>d.name+(d.why?`（${d.why}）`:"")).join("；")):null,
     t.exits?.length?el("p",{class:"cast"},el("b",{},"退场"),t.exits.map(d=>`${d.name}（${d.status}）`).join("；")):null,
-    t.next_cast?.length?el("p",{class:"cast"},el("b",{},"下季点名"),["刘禅",...t.next_cast.map(d=>d.name).filter(x=>x!=="刘禅")].join("、")):null,
-    n?el("button",{type:"button",class:"linkbtn",onclick:()=>{actsIdx=chronIdx;go("acts")}},`展开众人心思与密信（${n} 人）`):el("p",{class:"empty",style:"margin-top:12px"},"本季无人登场。"));
+    t.next_cast?.length?el("p",{class:"cast"},el("b",{},`下${U}点名`),[...LEADS,...t.next_cast.map(d=>d.name).filter(x=>!LEADS.includes(x))].join("、")):null,
+    n?el("button",{type:"button",class:"linkbtn",onclick:()=>{actsIdx=chronIdx;go("acts")}},`展开众人心思与密信（${n} 人）`):el("p",{class:"empty",style:"margin-top:12px"},`本${U}无人登场。`));
 }
 
 /* ---------- 悬案 ---------- */
 function renderThreads(){
   const T=[...(W.threads||[])].sort((a,b)=>(!!a.major-!!b.major)||a.since-b.since);
-  put($("threads"),el("div",{class:"card-h"},el("h2",{},"悬而未决"),el("span",{},`${T.length} 条 · 普通线索 8 季内必须收回`)),
+  put($("threads"),el("div",{class:"card-h"},el("h2",{},"悬而未决"),el("span",{},`${T.length} 条 · 普通线索 8 ${U}内必须收回`)),
     T.length?el("div",{class:"evs",style:"display:flex;flex-direction:column;gap:10px"},T.map(x=>{const idle=W.turn-x.last;
       return el("div",{},el("div",{style:"display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"},el("b",{style:"font-family:var(--f-serif)"},x.title),
-        el("span",{style:`font-size:12px;color:${x.major?"var(--gold)":x.since+8-W.turn-1<=2?"var(--bad)":"var(--muted)"}`},x.major?`第${x.since}季起 · 全书主钩子`:`第${x.since}季起 · ${x.since+8-W.turn-1>0?"还剩"+(x.since+8-W.turn-1)+"季":"本季须了结"}`)),
+        el("span",{style:`font-size:12px;color:${x.major?"var(--gold)":x.since+8-W.turn-1<=2?"var(--bad)":"var(--muted)"}`},x.major?`第${x.since}${U}起 · 全书主钩子`:`第${x.since}${U}起 · ${x.since+8-W.turn-1>0?"还剩"+(x.since+8-W.turn-1)+U:"本"+U+"须了结"}`)),
         el("div",{style:"font-size:13px;color:var(--ink-2)"},x.detail))})):el("p",{class:"empty"},"暂无。"));
 }
 
@@ -615,7 +643,7 @@ function renderActs(){
       el("h2",{},t?`${turnLabel(t)} · ${t.date.main}`:"众人心思"),
       el("div",{class:"sub"},t?`${acts.length} 人登场 · 密信 ${letters} 封 · 天命干预：${t.director||"无"}`:"")),
       el("button",{type:"button",class:"btn",onclick:()=>go("map")},"回到沙盘")),
-    el("ol",{class:"seasons","aria-label":"季度"},LOG.map((x,i)=>el("li",{},el("button",{type:"button","aria-current":i===actsIdx?"true":"false",onclick:()=>{actsIdx=i;renderActs()}},
+    el("ol",{class:"seasons","aria-label":U},LOG.map((x,i)=>el("li",{},el("button",{type:"button","aria-current":i===actsIdx?"true":"false",onclick:()=>{actsIdx=i;renderActs()}},
       el("small",{},`${turnLabel(x)} · ${x.acts?.length||0} 人`),el("b",{},x.date.main))))),
     acts.length?el("div",{class:"agents"},acts.map(a=>{const c=CHARS[a.name]||{},ac=a.action||{};
       return el("article",{class:"agent"},
@@ -626,7 +654,7 @@ function renderActs(){
         el("div",{class:"s"},el("em",{},"行："),[ac.target,ac.detail].filter(Boolean).join("：")||"按兵不动"),
         a.public_speech?el("div",{class:"s"},el("em",{},"曰："),a.public_speech):null,
         (a.secret_letters||[]).map(l=>el("div",{class:"letter"},el("small",{class:"cut"},`密 · 致${l.to}`),el("span",{},l.content))))}))
-      :el("section",{class:"card"},el("p",{class:"empty"},t&&t.turn===0?"序幕无人登场。在 Claude Code 里输入 /turn 推演第一季，这里会揭开每个人的决断、内心和密信。":"本季无人登场。")));
+      :el("section",{class:"card"},el("p",{class:"empty"},t&&t.turn===0?`序幕无人登场。在 Claude Code 里输入 /turn 推演第一${U}，这里会揭开每个人的决断、内心和密信。`:`本${U}无人登场。`)));
 }
 
 /* ---------- 平行历史 ---------- */
@@ -641,30 +669,34 @@ function renderBranches(){
   const grid=`minmax(150px,180px) repeat(${maxT},minmax(130px,1fr))`;
   const matrix=el("div",{class:"matrix",style:`grid-template-columns:${grid}`},
     el("span",{class:"hd"}),cols.map(c=>el("span",{class:"hd"},c)),
-    B.map(b=>[el("div",{class:"bn"},el("b",{style:b.current?"color:var(--gold)":""},b.name),el("span",{},b===base?"基准线":forkAt[b.name]<b.turns.length?`第 ${b.turns[forkAt[b.name]].turn} 季起分歧`:"与基准线相同")),
+    B.map(b=>[el("div",{class:"bn"},el("b",{style:b.current?"color:var(--gold)":""},b.name),el("span",{},b===base?"基准线":forkAt[b.name]<b.turns.length?`第 ${b.turns[forkAt[b.name]].turn} ${U}起分歧`:"与基准线相同")),
       Array.from({length:maxT},(_,i)=>{const t=b.turns[i];if(!t)return el("div",{class:"gap"});
         const kind=b===base?"":i<forkAt[b.name]?"shared":i===forkAt[b.name]?"fork":"";
-        return el("button",{type:"button",class:"cell "+kind,title:`从这一季开新分支`,onclick:()=>copy(`/fork 新分支名 从第${t.turn}季`)},t.director?`天命：${t.director}`:head(t))})]));
-  const stat=(b,f)=>{const ks=Object.keys(b.cities).filter(k=>b.cities[k]===f);return`${ks.length} 城 / ${ks.reduce((a,k)=>a+(b.troops[k]||0),0)} 万`};
+        return el("button",{type:"button",class:"cell "+kind,title:`从这一${U}开新分支`,onclick:()=>copy(`/fork 新分支名 从第${t.turn}${U}`)},t.director?`天命：${t.director}`:head(t))})]));
+  const stat=(b,f)=>{const ks=Object.keys(b.cities).filter(k=>b.cities[k]===f);return`${ks.length} ${SC} / ${ks.reduce((a,k)=>a+(b.troops[k]||0),0)}${LB.troop_unit?" "+LB.troop_unit:""}`};
   put($("v-branches"),
-    el("div",{class:"page-h"},el("div",{},el("h2",{},"平行历史"),el("div",{class:"sub"},"每条线是一个 git 分支，每一格是一季的提交。点任意一格会复制从那一季开新分支的命令。")),
-      el("button",{type:"button",class:"btn",onclick:()=>copy("/fork 新分支名 从第0季 干预内容")},"复制开分支命令")),
+    el("div",{class:"page-h"},el("div",{},el("h2",{},"平行历史"),el("div",{class:"sub"},`每条线是一个 git 分支，每一格是一${U}的提交。点任意一格会复制从那一${U}开新分支的命令。`)),
+      el("button",{type:"button",class:"btn",onclick:()=>copy(`/fork 新分支名 从第0${U} 干预内容`)},"复制开分支命令")),
     el("section",{class:"card"},el("div",{class:"scroll-x"},matrix)),
     el("section",{class:"card"},el("div",{class:"card-h"},el("h2",{},"各线当前局势"),el("span",{},`共 ${B.length} 条分支`)),
       el("div",{class:"scroll-x"},el("table",{class:"cmp"},
-        el("thead",{},el("tr",{},["分支","已推演","蜀 城 / 兵","魏 城 / 兵","吴 城 / 兵","已故","分歧起点"].map(h=>el("th",{},h)))),
-        el("tbody",{},B.map(b=>el("tr",{},el("td",{style:b.current?"color:var(--gold)":""},b.name),el("td",{},`${Math.max(0,b.turns.length-1)} 季`),
+        el("thead",{},el("tr",{},["分支","已推演",...FACTIONS.map(f=>`${f} ${SC} / ${ST}`),"已故","分歧起点"].map(h=>el("th",{},h)))),
+        el("tbody",{},B.map(b=>el("tr",{},el("td",{style:b.current?"color:var(--gold)":""},b.name),el("td",{},`${Math.max(0,b.turns.length-1)} ${U}`),
           FACTIONS.map(f=>el("td",{},stat(b,f))),el("td",{},b.dead?.length?b.dead.join("、"):"无"),
-          el("td",{style:"color:var(--muted)"},b===base?"—":forkAt[b.name]<b.turns.length?`第 ${b.turns[forkAt[b.name]].turn} 季`+(b.turns[forkAt[b.name]].director?` · ${b.turns[forkAt[b.name]].director}`:""):"—"))))))),
-    B.length<2?el("p",{class:"hint"},"目前只有一条分支。在 Claude Code 里用 /fork 开平行历史，再运行 build-viewer，这里就能逐季对比。"):null);
+          el("td",{style:"color:var(--muted)"},b===base?"—":forkAt[b.name]<b.turns.length?`第 ${b.turns[forkAt[b.name]].turn} ${U}`+(b.turns[forkAt[b.name]].director?` · ${b.turns[forkAt[b.name]].director}`:""):"—"))))))),
+    B.length<2?el("p",{class:"hint"},`目前只有一条分支。在 Claude Code 里用 /fork 开平行历史，再运行 build-viewer，这里就能逐${U}对比。`):null);
 }
 
 /* ---------- 关系图 ---------- */
 const TIES=CFG.ties||[];
 function tiesOf(n){return TIES.filter(t=>t[0]===n||t[1]===n).map(([a,b,l,d])=>[a===n?b:a,l,d])}
 let gFocus=null, gShowTies=true, gShowRel=true, gShowAll=false;
+function graphCenters(){
+  if(FACTIONS.length===3&&!CFG.colors)return{蜀:[240,500],魏:[750,250],吴:[750,760]};
+  return Object.fromEntries(FACTIONS.map((f,i)=>{const a=-Math.PI/2+i/FACTIONS.length*Math.PI*2;return[f,[500+300*Math.cos(a),520+310*Math.sin(a)]]}));
+}
 function graphLayout(names){
-  const C={蜀:[240,500],魏:[750,250],吴:[750,760]},pos={},major=new Set(CFG.major||[]);
+  const C=graphCenters(),pos={},major=new Set(CFG.major||[]);
   FACTIONS.forEach(f=>{
     const ns=names.filter(n=>CHARS[n].faction===f).sort((a,b)=>(major.has(b)-major.has(a))||ORDER.indexOf(a)-ORDER.indexOf(b));
     const inner=ns.filter(n=>major.has(n)),outer=ns.filter(n=>!major.has(n)),[cx,cy]=C[f];
@@ -683,8 +715,9 @@ function renderGraph(){
   if(gShowRel)Object.entries(W.rel).forEach(([k,v])=>{const[a,b]=k.split("|");if(pos[a]&&pos[b]&&Math.abs(v)>=(focus?20:40))edges.push({a,b,kind:"rel",v})});
   if(focus)edges.forEach(e=>{if(e.a===focus)near.add(e.b);if(e.b===focus)near.add(e.a)});
   const svg=sv("svg",{viewBox:"0 0 1000 1000",role:"img","aria-label":"人物关系图"});
-  [["蜀汉",240,500,"var(--shu)"],["曹魏",750,250,"var(--wei)"],["孙吴",750,760,"var(--wu)"]].forEach(([t,x,y,c])=>{
-    svg.append(sv("text",{x,y:y-195,"text-anchor":"middle",style:`font-family:var(--f-title);font-size:30px;fill:${c};opacity:.55`},t))});
+  const GC=graphCenters(),small=FACTIONS.length>3;
+  FACTIONS.forEach(f=>{const[x,y]=GC[f];
+    svg.append(sv("text",{x,y:y-(small?150:195),"text-anchor":"middle",style:`font-family:var(--f-title);font-size:${small?24:30}px;fill:${COL[f]};opacity:.55`},FNAME(f).replace(/（.*/,"")))});
   edges.forEach(e=>{const[x1,y1]=pos[e.a],[x2,y2]=pos[e.b],mx=(x1+x2)/2,my=(y1+y2)/2,dx=x2-x1,dy=y2-y1,len=Math.hypot(dx,dy)||1,bend=e.kind==="tie"?.12:-.12;
     const qx=mx-dy/len*len*bend,qy=my+dx/len*len*bend,on=!focus||e.a===focus||e.b===focus;
     const st=e.kind==="tie"?"stroke:var(--gold);stroke-width:1.6;stroke-dasharray:5 4":`stroke:${e.v>0?"var(--good)":"var(--bad)"};stroke-width:${(Math.abs(e.v)/28).toFixed(1)}`;
@@ -705,10 +738,10 @@ function renderGraph(){
       R.length?[el("div",{class:"lbl"},"推演中的好恶（绿亲红恶）"),el("div",{class:"ties"},R.map(([o,v])=>el("button",{type:"button",onclick:()=>{gFocus=o;renderGraph()}},el("b",{},o),el("span",{style:`color:${v>=0?"var(--good)":"var(--bad)"}`},sgn(v)))))]:null,
       el("button",{type:"button",class:"btn",style:"margin-top:14px",onclick:()=>{select(focus);ptab="intro";renderPerson();go("map");$("person").scrollIntoView({block:"start"})}},"打开完整档案"))
     :el("section",{class:"card"},el("h2",{style:"margin:0 0 8px;font-family:var(--f-serif);font-size:17px"},"怎么看这张图"),
-      el("p",{class:"empty",style:"line-height:1.8"},"三国各成一团，大圆是主要人物。金色虚线是史书里就有的亲缘、旧谊或宿怨，比如父子、翁婿、夷陵之仇；绿线和红线是推演中逐渐形成的亲近与敌视，线越粗越强烈。点任意一人，只看他的关系，并在这里读他的小传。"));
+      el("p",{class:"empty",style:"line-height:1.8"},`各方阵营各成一团，大圆是主要人物。金色虚线是开局就有的亲缘、旧谊或宿怨，比如父子、同窗、上下级；绿线和红线是推演中逐渐形成的亲近与敌视，线越粗越强烈。点任意一人，只看他的关系，并在这里读他的小传。`));
   const fbtn=(label,on,fn)=>el("button",{type:"button","aria-pressed":on?"true":"false",onclick:()=>{fn();renderGraph()}},label);
   put($("v-graph"),
-    el("div",{class:"page-h"},el("div",{},el("h2",{},"人物关系图"),el("div",{class:"sub"},"不熟悉三国人物也没关系：点一个人，看他是谁、和谁有什么渊源。")),
+    el("div",{class:"page-h"},el("div",{},el("h2",{},"人物关系图"),el("div",{class:"sub"},"人物太多记不住也没关系：点一个人，看他是谁、和谁有什么渊源。")),
       el("button",{type:"button",class:"btn",onclick:()=>go("map")},"回到沙盘")),
     el("div",{class:"graph-wrap"},
       el("section",{class:"card graph-main graph"},
@@ -730,6 +763,9 @@ function go(v,noHash){
 }
 document.querySelectorAll("nav.views button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
 
+if(MAPC){$("map-title").textContent=MAPC.title;$("map-note").textContent=MAPC.note}
+put($("legend"),FACTIONS.map(f=>el("span",{},el("i",{style:`background:${MCOL[f]}`}),FNAME(f))),MAPC?null:el("span",{},"浅色为三国疆域外诸部"));
+if(CFG.labels){$("court-title").textContent="人物";$("court-note").textContent=`金框为本${U}登场 · “下${U}”为天道点名 · 红点为有未拆密信`}
 renderTop();renderFacts();buildMap();renderCityInfo();renderCourt();renderPerson();renderChron();renderThreads();
 go((location.hash||"").slice(1)||"map",true);
 </script>
