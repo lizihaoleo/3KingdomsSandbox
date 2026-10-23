@@ -1,6 +1,8 @@
 # 《孤岛》正文
 
-依据 `outline/大纲-谍战线.md`（第四稿）写作。每章一个文件，文件名是“两位序号-章名”。
+依据 `outline/大纲-谍战线.md`（第五稿）写作。每章一个文件，文件名是“两位序号-章名”。
+
+手机阅读页：`python3 tools/novel_page.py novel/谍战线` 生成 `正文.html`，已发布为私有页面 https://claude.ai/artifact/CQmoWtchFybbURaLVNpx9x 。每次改动正文后重新生成并发布到这个链接（用同一文件路径发布即可保持链接不变）。
 
 ## 文风约定
 
