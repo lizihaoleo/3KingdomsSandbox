@@ -3,7 +3,8 @@
   --fill    按日期补全/改正 账本.md 时间线的“星期”一栏
   --from/--to  只查这些章（默认全部）
 检查：账本时间线星期；正文禁用词与阳历“X月初X”；电文字条里的真名；正文里“X月X日，星期X”是否对得上；
-“不是……是”与破折号的每章用量；单句短段收章。"""
+“不是……是”与破折号的每章用量；单句短段收章；
+“前年/去年/今年/大前年”与账本“八、关键事件年份”是否对得上。"""
 import re, sys, datetime
 from pathlib import Path
 
@@ -27,6 +28,15 @@ hi = int(args[args.index("--to") + 1]) if "--to" in args else 999
 ledger = root / "账本.md"
 out = []
 
+# 账本“八、关键事件年份”：| 关键词1、关键词2 | 年 | 说明 |
+EVENTS = []
+if ledger.exists():
+    sec = ledger.read_text(encoding="utf-8").split("## 八、关键事件年份", 1)
+    if len(sec) == 2:
+        for m in re.finditer(r"^\| ([^|]+?) \| (\d{4}) \|", sec[1].split(chr(10) + "## ", 1)[0], re.M):
+            if m[1] != "关键词": EVENTS.append(([k.strip() for k in m[1].split("、")], int(m[2])))
+REL = {"大前年": 3, "前年": 2, "去年": 1, "今年": 0}
+
 # 一、账本时间线星期
 if ledger.exists():
     lines = ledger.read_text(encoding="utf-8").split("\n"); changed = False
@@ -48,7 +58,7 @@ for p in sorted(root.glob("[0-9][0-9]-*.md")):
     if not lo <= n <= hi: continue
     text = p.read_text(encoding="utf-8"); L = text.split("\n")
     head = "\n".join(L[:4])
-    years = [cn2int(y) + 1911 for y in re.findall(r"民国([一二三四五六七八九十]+)年", head)]
+    years = [cn2int(y) + 1911 for y in re.findall(r"(?:民国|至)([一二三四五六七八九十]+)年", head)]
     tag = p.stem
     for i, l in enumerate(L, 1):
         for b in BANNED:
@@ -69,6 +79,16 @@ for p in sorted(root.glob("[0-9][0-9]-*.md")):
                 if got != w: out.append(f"{tag}:{i} {y}年{mo}月{dd}日是星期{w}，文中写星期{got}")
             except ValueError:
                 out.append(f"{tag}:{i} 日期不存在：{m[0]}")
+    if years and EVENTS:
+        for i, l in enumerate(L, 1):
+            for sent in re.split(r"[。！？]", l):
+                for w, d in REL.items():
+                    for m in re.finditer(w, sent):
+                        if w == "前年" and sent[max(0, m.start() - 1):m.start()] == "大": continue
+                        for keys, ey in EVENTS:
+                            k = next((k for k in keys if k in sent), None)
+                            if k and all(y - d != ey for y in set(years)):
+                                out.append(f"{tag}:{i} “{w}”与“{k}”（{ey}年）对不上，本章是{'/'.join(map(str, sorted(set(years))))}年：{sent.strip()[:40]}")
     bushi = [i for i, l in enumerate(L, 1) for _ in re.finditer(r"不是[^。！？\n]{0,30}?(而是|，是|,是|是)", l)]
     if len(bushi) > LIMIT_BUSHI: out.append(f"{tag} “不是……是”{len(bushi)}处，超过{LIMIT_BUSHI}：行 {bushi}")
     dash = [i for i, l in enumerate(L, 1) for _ in range(l.count("——"))]
