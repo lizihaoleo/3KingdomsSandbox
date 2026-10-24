@@ -39,7 +39,7 @@ if ledger.exists():
             else: out.append(f"账本 时间线 {d}：星期应为{w}，写的是“{m[4].strip()}”")
     if changed: ledger.write_text("\n".join(lines), encoding="utf-8"); print("已补全账本星期")
 
-BANNED = ["除夕", "年夜饭", "元宵", "影佐将军"]
+BANNED = ["除夕", "年夜饭", "元宵", "影佐将军", "晴气课长"]
 REAL = ["沈墨言", "林知微", "邵子钧"]
 LIMIT_BUSHI, LIMIT_DASH = 3, 2
 
