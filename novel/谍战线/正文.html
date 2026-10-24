@@ -31,13 +31,14 @@ hr::before{content:"⁂"}
 .side{position:fixed;top:0;bottom:0;left:0;width:15.5rem;overflow-y:auto;padding:28px 18px 40px 22px;background:var(--paper);border-right:1px solid var(--line);z-index:20;scrollbar-width:thin}
 .side .bk{font-family:var(--display);font-size:1.25rem;letter-spacing:.16em;margin-bottom:1rem}
 .vh{font-family:var(--display);text-align:center;color:var(--seal);font-size:1.05rem;letter-spacing:.3em;margin:4.5rem 0 -1.6rem;scroll-margin-top:24px}
-.tocbtn{display:none}
-@media (min-width:1000px){.wrap{margin-left:calc(15.5rem + max(0px,(100vw - 15.5rem - 38rem)/2))}}
+.tocbtn{position:fixed;z-index:25;top:max(10px,calc(env(safe-area-inset-top,0px) + 8px));left:max(10px,env(safe-area-inset-left,0px));font:600 .85rem var(--ui);color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;min-height:36px;cursor:pointer}
+.tocbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (min-width:1000px){.side{padding-top:64px}.wrap{margin-left:calc(15.5rem + max(0px,(100vw - 15.5rem - 38rem)/2))}
+body.notoc .side{display:none}body.notoc .wrap{margin-left:auto}}
 @media (max-width:999px){
 .side{transform:translateX(-102%);transition:transform .22s ease;width:min(80vw,18rem);box-shadow:0 0 24px rgb(0 0 0/.18);padding-top:max(28px,calc(env(safe-area-inset-top,0px) + 16px))}
 .side:not(.open){box-shadow:none;visibility:hidden;transition:transform .22s ease,visibility 0s .22s}
 .side.open{transform:none}
-.tocbtn{display:block;position:fixed;z-index:15;top:max(10px,calc(env(safe-area-inset-top,0px) + 8px));left:max(10px,env(safe-area-inset-left,0px));font:600 .85rem var(--ui);color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;min-height:36px}
 .scrim{position:fixed;inset:0;background:rgb(0 0 0/.3);z-index:18;display:none}
 .scrim.open{display:block}
 .wrap{padding-top:56px}
@@ -457,7 +458,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <p>程伯雄是晚上九点来的，带着一只油纸包。</p>
 <p>他把油纸包放在桌上，没有坐。“捕房的验尸单写好了。”他说，“劫财。两个人，一个是八仙桥的，一个是你们的。”</p>
 <p>陈恭澍没有去碰那只油纸包。他知道里面是什么，也知道“你们的”那一个是谁。小凌，二十三岁，宁波人，进组一年零四个月，娘还在乡下，每月托人捎十块钱回去。下午四点钟以后，这个名字就从花名册上挪到了另一本簿子上。那本簿子陈恭澍自己收着，上面的名字越来越多。</p>
-<p>“弄口望风的是我的人。”程伯雄说，“对方跑掉的那个，看见他了。看见的是一张脸，不是一个名字。我把人调去闸北了。”</p>
+<p>“弄口望风的是我的人。”程伯雄说，“跑掉的那个回头看了他一眼，隔着十几步，路灯底下。我明天就把他调去闸北，半年不回法租界。”</p>
 <p>“知道了。”</p>
 <p>程伯雄看了他一眼，像是还有话，又咽回去了。他把油纸包往陈恭澍这边推了推，走了。</p>
 <p>陈恭澍坐了一会儿，才打开。</p>
@@ -4932,11 +4933,16 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 </main>
 <script>
 const side=document.querySelector('.side'),scrim=document.querySelector('.scrim'),btn=document.querySelector('.tocbtn');
+const wide=matchMedia('(min-width:1000px)');
 function setOpen(o){side.classList.toggle('open',o);scrim.classList.toggle('open',o);btn.setAttribute('aria-expanded',o)}
-btn.addEventListener('click',()=>setOpen(!side.classList.contains('open')));
-scrim.addEventListener('click',()=>setOpen(false));
-side.addEventListener('click',e=>{if(e.target.closest('a'))setOpen(false)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false)});
+function setHidden(h){document.body.classList.toggle('notoc',h);try{localStorage.setItem('notoc',h?'1':'')}catch(e){}label()}
+function label(){const shown=wide.matches?!document.body.classList.contains('notoc'):side.classList.contains('open');btn.textContent=shown?'隐藏目录':'目录';btn.setAttribute('aria-expanded',shown)}
+try{if(localStorage.getItem('notoc'))document.body.classList.add('notoc')}catch(e){}
+btn.addEventListener('click',()=>{if(wide.matches)setHidden(!document.body.classList.contains('notoc'));else{setOpen(!side.classList.contains('open'));label()}});
+wide.addEventListener('change',()=>{setOpen(false);label()});label();
+scrim.addEventListener('click',()=>{setOpen(false);label()});
+side.addEventListener('click',e=>{if(e.target.closest('a')&&!wide.matches){setOpen(false);label()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){setOpen(false);label()}});
 const links=new Map([...document.querySelectorAll('.toc .ch')].map(a=>[a.getAttribute('href').slice(1),a]));
 let cur=null;
 const io=new IntersectionObserver(es=>{for(const e of es){if(e.isIntersecting){const a=links.get(e.target.id);if(a&&a!==cur){cur&&cur.classList.remove('on');a.classList.add('on');cur=a;

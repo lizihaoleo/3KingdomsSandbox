@@ -33,13 +33,14 @@ hr::before{content:"⁂"}
 .side{position:fixed;top:0;bottom:0;left:0;width:15.5rem;overflow-y:auto;padding:28px 18px 40px 22px;background:var(--paper);border-right:1px solid var(--line);z-index:20;scrollbar-width:thin}
 .side .bk{font-family:var(--display);font-size:1.25rem;letter-spacing:.16em;margin-bottom:1rem}
 .vh{font-family:var(--display);text-align:center;color:var(--seal);font-size:1.05rem;letter-spacing:.3em;margin:4.5rem 0 -1.6rem;scroll-margin-top:24px}
-.tocbtn{display:none}
-@media (min-width:1000px){.wrap{margin-left:calc(15.5rem + max(0px,(100vw - 15.5rem - 38rem)/2))}}
+.tocbtn{position:fixed;z-index:25;top:max(10px,calc(env(safe-area-inset-top,0px) + 8px));left:max(10px,env(safe-area-inset-left,0px));font:600 .85rem var(--ui);color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;min-height:36px;cursor:pointer}
+.tocbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (min-width:1000px){.side{padding-top:64px}.wrap{margin-left:calc(15.5rem + max(0px,(100vw - 15.5rem - 38rem)/2))}
+body.notoc .side{display:none}body.notoc .wrap{margin-left:auto}}
 @media (max-width:999px){
 .side{transform:translateX(-102%);transition:transform .22s ease;width:min(80vw,18rem);box-shadow:0 0 24px rgb(0 0 0/.18);padding-top:max(28px,calc(env(safe-area-inset-top,0px) + 16px))}
 .side:not(.open){box-shadow:none;visibility:hidden;transition:transform .22s ease,visibility 0s .22s}
 .side.open{transform:none}
-.tocbtn{display:block;position:fixed;z-index:15;top:max(10px,calc(env(safe-area-inset-top,0px) + 8px));left:max(10px,env(safe-area-inset-left,0px));font:600 .85rem var(--ui);color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;min-height:36px}
 .scrim{position:fixed;inset:0;background:rgb(0 0 0/.3);z-index:18;display:none}
 .scrim.open{display:block}
 .wrap{padding-top:56px}
@@ -91,11 +92,16 @@ def cnum(n):
 
 JS = """
 const side=document.querySelector('.side'),scrim=document.querySelector('.scrim'),btn=document.querySelector('.tocbtn');
+const wide=matchMedia('(min-width:1000px)');
 function setOpen(o){side.classList.toggle('open',o);scrim.classList.toggle('open',o);btn.setAttribute('aria-expanded',o)}
-btn.addEventListener('click',()=>setOpen(!side.classList.contains('open')));
-scrim.addEventListener('click',()=>setOpen(false));
-side.addEventListener('click',e=>{if(e.target.closest('a'))setOpen(false)});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false)});
+function setHidden(h){document.body.classList.toggle('notoc',h);try{localStorage.setItem('notoc',h?'1':'')}catch(e){}label()}
+function label(){const shown=wide.matches?!document.body.classList.contains('notoc'):side.classList.contains('open');btn.textContent=shown?'隐藏目录':'目录';btn.setAttribute('aria-expanded',shown)}
+try{if(localStorage.getItem('notoc'))document.body.classList.add('notoc')}catch(e){}
+btn.addEventListener('click',()=>{if(wide.matches)setHidden(!document.body.classList.contains('notoc'));else{setOpen(!side.classList.contains('open'));label()}});
+wide.addEventListener('change',()=>{setOpen(false);label()});label();
+scrim.addEventListener('click',()=>{setOpen(false);label()});
+side.addEventListener('click',e=>{if(e.target.closest('a')&&!wide.matches){setOpen(false);label()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){setOpen(false);label()}});
 const links=new Map([...document.querySelectorAll('.toc .ch')].map(a=>[a.getAttribute('href').slice(1),a]));
 let cur=null;
 const io=new IntersectionObserver(es=>{for(const e of es){if(e.isIntersecting){const a=links.get(e.target.id);if(a&&a!==cur){cur&&cur.classList.remove('on');a.classList.add('on');cur=a;
