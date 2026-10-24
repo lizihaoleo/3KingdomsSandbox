@@ -52,7 +52,8 @@ for p in sorted(root.glob("[0-9][0-9]-*.md")):
     tag = p.stem
     for i, l in enumerate(L, 1):
         for b in BANNED:
-            if b in l: out.append(f"{tag}:{i} 禁用词“{b}”")
+            if b in l and not (b in ("除夕", "年夜饭", "元宵") and re.search(r"旧历|腊月|正月|春节|农历", l)):
+                out.append(f"{tag}:{i} 禁用词“{b}”（指旧历时请在同段写明旧历/腊月/正月）")
         for m in re.finditer(r"[一二三四五六七八九十]+月初[一二三四五六七八九十]", l):
             out.append(f"{tag}:{i} 阳历不写“{m[0]}”，写“X月X日”")
         for s in re.split(r"[。！？]", l):
