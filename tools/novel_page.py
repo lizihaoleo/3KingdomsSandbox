@@ -1,5 +1,6 @@
 """把 novel/<线名>/NN-*.md 合成一页手机友好的 HTML，供发布成私有页面在手机上读。
-用法：python3 tools/novel_page.py novel/谍战线   →  novel/谍战线/正文.html"""
+用法：python3 tools/novel_page.py novel/谍战线   →  novel/谍战线/正文.html
+可选 novel/<线名>/分卷.txt，每行“第一卷 雨夜 1-7”：左侧目录按卷分组，正文插卷名。"""
 import html, re, sys
 from pathlib import Path
 
@@ -21,10 +22,29 @@ blockquote{margin:1.2rem 0 1.2rem 1.4em;padding:0;color:var(--muted);font-size:.
 blockquote p{text-indent:0}
 hr{border:0;height:auto;margin:2.2rem 0;text-align:center;color:var(--muted);font-size:.9rem;letter-spacing:.6em}
 hr::before{content:"⁂"}
-nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin:1.4rem calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;padding:.5rem max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;font-family:var(--ui)}
-nav::-webkit-scrollbar{display:none}
-nav a{flex:none;font-size:.85rem;color:var(--accent);text-decoration:none;padding:.2rem .7rem;border:1px solid var(--line);border-radius:999px;background:var(--paper)}
-nav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toc{font-family:var(--ui);font-size:.86rem;line-height:1.5}
+.toc .vol{display:block;margin:1.1rem 0 .3rem;color:var(--seal);font-weight:600;letter-spacing:.08em;text-decoration:none}
+.toc .vol:first-child{margin-top:0}
+.toc .ch{display:block;padding:.18rem .6rem;margin-left:-.6rem;border-radius:6px;color:var(--muted);text-decoration:none}
+.toc .ch b{font-weight:400;color:var(--ink)}
+.toc .ch:hover,.toc .ch.on{background:var(--tag)}
+.toc .ch.on b{color:var(--accent);font-weight:600}
+.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.side{position:fixed;top:0;bottom:0;left:0;width:15.5rem;overflow-y:auto;padding:28px 18px 40px 22px;background:var(--paper);border-right:1px solid var(--line);z-index:20;scrollbar-width:thin}
+.side .bk{font-family:var(--display);font-size:1.25rem;letter-spacing:.16em;margin-bottom:1rem}
+.vh{font-family:var(--display);text-align:center;color:var(--seal);font-size:1.05rem;letter-spacing:.3em;margin:4.5rem 0 -1.6rem;scroll-margin-top:24px}
+.tocbtn{display:none}
+@media (min-width:1000px){.wrap{margin-left:calc(15.5rem + max(0px,(100vw - 15.5rem - 38rem)/2))}}
+@media (max-width:999px){
+.side{transform:translateX(-102%);transition:transform .22s ease;width:min(80vw,18rem);box-shadow:0 0 24px rgb(0 0 0/.18);padding-top:max(28px,calc(env(safe-area-inset-top,0px) + 16px))}
+.side:not(.open){box-shadow:none;visibility:hidden;transition:transform .22s ease,visibility 0s .22s}
+.side.open{transform:none}
+.tocbtn{display:block;position:fixed;z-index:15;top:max(10px,calc(env(safe-area-inset-top,0px) + 8px));left:max(10px,env(safe-area-inset-left,0px));font:600 .85rem var(--ui);color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;min-height:36px}
+.scrim{position:fixed;inset:0;background:rgb(0 0 0/.3);z-index:18;display:none}
+.scrim.open{display:block}
+.wrap{padding-top:56px}
+h2{scroll-margin-top:56px}
+}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 .end{font-family:var(--ui);color:var(--muted);font-size:.85rem;text-align:center;margin-top:3rem;letter-spacing:.1em}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
@@ -60,28 +80,68 @@ def chapter(md, idx):
     return cid, short, head + out
 
 
+CN = "零一二三四五六七八九"
+
+
+def cnum(n):
+    if n < 10: return CN[n]
+    t, u = divmod(n, 10)
+    return (CN[t] if t > 1 else "") + "十" + (CN[u] if u else "")
+
+
+JS = """
+const side=document.querySelector('.side'),scrim=document.querySelector('.scrim'),btn=document.querySelector('.tocbtn');
+function setOpen(o){side.classList.toggle('open',o);scrim.classList.toggle('open',o);btn.setAttribute('aria-expanded',o)}
+btn.addEventListener('click',()=>setOpen(!side.classList.contains('open')));
+scrim.addEventListener('click',()=>setOpen(false));
+side.addEventListener('click',e=>{if(e.target.closest('a'))setOpen(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false)});
+const links=new Map([...document.querySelectorAll('.toc .ch')].map(a=>[a.getAttribute('href').slice(1),a]));
+let cur=null;
+const io=new IntersectionObserver(es=>{for(const e of es){if(e.isIntersecting){const a=links.get(e.target.id);if(a&&a!==cur){cur&&cur.classList.remove('on');a.classList.add('on');cur=a;
+const r=a.getBoundingClientRect(),sr=side.getBoundingClientRect();if(r.top<sr.top+40||r.bottom>sr.bottom-40)a.scrollIntoView({block:'center'})}}}},{rootMargin:'0px 0px -70% 0px'});
+document.querySelectorAll('h2[id]').forEach(h=>io.observe(h));
+"""
+
 src = Path(sys.argv[1])
 files = sorted(p for p in src.glob("[0-9][0-9]-*.md"))
 line_name = src.name
 book = "孤岛"
-nav, body = [], []
+vols = {}
+vf = src / "分卷.txt"
+if vf.exists():
+    for l in vf.read_text(encoding="utf-8").splitlines():
+        if m := re.match(r"(\S+)\s+(\S+)\s+(\d+)-(\d+)", l.strip()):
+            vols[int(m[3])] = (m[1], m[2])
+toc, body = [], []
+vi = 0
 for i, p in enumerate(files, 1):
+    num = int(p.name[:2])
     cid, short, part = chapter(p.read_text(encoding="utf-8"), i)
-    nav.append(f'<a href="#{cid}">{html.escape(short)}</a>')
+    if num in vols:
+        vi += 1; vn, vt = vols[num]
+        toc.append(f'<a class="vol" href="#v{vi}">{html.escape(vn)} · {html.escape(vt)}</a>')
+        body.append(f'<div class="vh" id="v{vi}">{html.escape(vn)}　{html.escape(vt)}</div>')
+    toc.append(f'<a class="ch" href="#{cid}">{cnum(num)}　<b>{html.escape(short)}</b></a>')
     body += part
 n = len(files)
-page = f"""<title>{book}</title>
+last = max([int(x) for x in re.findall(r"-(\d+)", vf.read_text(encoding="utf-8"))] or [0]) if vf.exists() else 0
+end = "—— 全书完 ——" if last and n >= last else "—— 未完 ——"
+page = f"""<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{book}</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap">
 <style>{CSS}</style>
+<button class="tocbtn" aria-expanded="false" aria-controls="toc">目录</button>
+<div class="scrim"></div>
+<aside class="side" id="toc"><div class="bk">{book}</div><nav class="toc" aria-label="目录">{''.join(toc)}</nav></aside>
 <main class="wrap">
 <h1>{book}</h1>
-<div class="sub">{html.escape(line_name)} · 正文 · 第一至{'一二三四五六七八九十'[n-1] if n <= 10 else n}章</div>
-<nav>{''.join(nav)}</nav>
+<div class="sub">{html.escape(line_name)} · 正文 · 第一至{cnum(n)}章</div>
 {chr(10).join(body)}
-<div class="end">—— 未完 ——</div>
+<div class="end">{end}</div>
 </main>
+<script>{JS}</script>
 """
 dst = src / "正文.html"
 dst.write_text(page, encoding="utf-8")

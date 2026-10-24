@@ -4,8 +4,26 @@
     {
       "name": "viewer",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "viewer"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--directory",
+        "viewer"
+      ],
       "port": 8765
+    },
+    {
+      "name": "novel",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--directory",
+        "novel"
+      ],
+      "port": 8766
     }
   ]
 }

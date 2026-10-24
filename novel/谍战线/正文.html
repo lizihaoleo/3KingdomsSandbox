@@ -1,4 +1,4 @@
-<title>孤岛</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>孤岛</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&display=swap">
@@ -20,18 +20,40 @@ blockquote{margin:1.2rem 0 1.2rem 1.4em;padding:0;color:var(--muted);font-size:.
 blockquote p{text-indent:0}
 hr{border:0;height:auto;margin:2.2rem 0;text-align:center;color:var(--muted);font-size:.9rem;letter-spacing:.6em}
 hr::before{content:"⁂"}
-nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin:1.4rem calc(-1*max(16px,env(safe-area-inset-left,0px))) 0;padding:.5rem max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;font-family:var(--ui)}
-nav::-webkit-scrollbar{display:none}
-nav a{flex:none;font-size:.85rem;color:var(--accent);text-decoration:none;padding:.2rem .7rem;border:1px solid var(--line);border-radius:999px;background:var(--paper)}
-nav a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toc{font-family:var(--ui);font-size:.86rem;line-height:1.5}
+.toc .vol{display:block;margin:1.1rem 0 .3rem;color:var(--seal);font-weight:600;letter-spacing:.08em;text-decoration:none}
+.toc .vol:first-child{margin-top:0}
+.toc .ch{display:block;padding:.18rem .6rem;margin-left:-.6rem;border-radius:6px;color:var(--muted);text-decoration:none}
+.toc .ch b{font-weight:400;color:var(--ink)}
+.toc .ch:hover,.toc .ch.on{background:var(--tag)}
+.toc .ch.on b{color:var(--accent);font-weight:600}
+.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.side{position:fixed;top:0;bottom:0;left:0;width:15.5rem;overflow-y:auto;padding:28px 18px 40px 22px;background:var(--paper);border-right:1px solid var(--line);z-index:20;scrollbar-width:thin}
+.side .bk{font-family:var(--display);font-size:1.25rem;letter-spacing:.16em;margin-bottom:1rem}
+.vh{font-family:var(--display);text-align:center;color:var(--seal);font-size:1.05rem;letter-spacing:.3em;margin:4.5rem 0 -1.6rem;scroll-margin-top:24px}
+.tocbtn{display:none}
+@media (min-width:1000px){.wrap{margin-left:calc(15.5rem + max(0px,(100vw - 15.5rem - 38rem)/2))}}
+@media (max-width:999px){
+.side{transform:translateX(-102%);transition:transform .22s ease;width:min(80vw,18rem);box-shadow:0 0 24px rgb(0 0 0/.18);padding-top:max(28px,calc(env(safe-area-inset-top,0px) + 16px))}
+.side:not(.open){box-shadow:none;visibility:hidden;transition:transform .22s ease,visibility 0s .22s}
+.side.open{transform:none}
+.tocbtn{display:block;position:fixed;z-index:15;top:max(10px,calc(env(safe-area-inset-top,0px) + 8px));left:max(10px,env(safe-area-inset-left,0px));font:600 .85rem var(--ui);color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;min-height:36px}
+.scrim{position:fixed;inset:0;background:rgb(0 0 0/.3);z-index:18;display:none}
+.scrim.open{display:block}
+.wrap{padding-top:56px}
+h2{scroll-margin-top:56px}
+}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 .end{font-family:var(--ui);color:var(--muted);font-size:.85rem;text-align:center;margin-top:3rem;letter-spacing:.1em}
 @media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
 </style>
+<button class="tocbtn" aria-expanded="false" aria-controls="toc">目录</button>
+<div class="scrim"></div>
+<aside class="side" id="toc"><div class="bk">孤岛</div><nav class="toc" aria-label="目录"><a class="vol" href="#v1">第一卷 · 雨夜</a><a class="ch" href="#c1">一　<b>四舍</b></a><a class="ch" href="#c2">二　<b>老锁匠</b></a><a class="ch" href="#c3">三　<b>半个名字</b></a><a class="ch" href="#c4">四　<b>测向车</b></a><a class="ch" href="#c5">五　<b>裁缝</b></a><a class="ch" href="#c6">六　<b>年刊</b></a><a class="ch" href="#c7">七　<b>皮货店</b></a><a class="vol" href="#v2">第二卷 · 密约</a><a class="ch" href="#c8">八　<b>街口那些生面孔</b></a><a class="ch" href="#c9">九　<b>胡佛总统号</b></a><a class="ch" href="#c10">十　<b>四舍的人不欠账</b></a><a class="ch" href="#c11">十一　<b>斜桥</b></a><a class="ch" href="#c12">十二　<b>不要打我的脸</b></a><a class="ch" href="#c13">十三　<b>刀柄朝里</b></a><a class="ch" href="#c14">十四　<b>汽艇</b></a><a class="ch" href="#c15">十五　<b>石子</b></a><a class="vol" href="#v3">第三卷 · 潮位</a><a class="ch" href="#c16">十六　<b>空屋</b></a><a class="ch" href="#c17">十七　<b>两辆脚踏车</b></a><a class="ch" href="#c18">十八　<b>磨盘</b></a><a class="ch" href="#c19">十九　<b>他拿老周去换他爹</b></a><a class="ch" href="#c20">二十　<b>子时潮水</b></a><a class="ch" href="#c21">二十一　<b>玻璃门后</b></a><a class="ch" href="#c22">二十二　<b>一副眼镜</b></a><a class="ch" href="#c23">二十三　<b>棺出后楼</b></a><a class="vol" href="#v4">第四卷 · 菜刀</a><a class="ch" href="#c24">二十四　<b>独饵</b></a><a class="ch" href="#c25">二十五　<b>换一个人</b></a><a class="ch" href="#c26">二十六　<b>换的是账</b></a><a class="ch" href="#c27">二十七　<b>以通敌论</b></a><a class="ch" href="#c28">二十八　<b>照一照光</b></a><a class="ch" href="#c29">二十九　<b>对口供</b></a><a class="vol" href="#v5">第五卷 · 汤圆</a><a class="ch" href="#c30">三十　<b>饵</b></a><a class="ch" href="#c31">三十一　<b>他不走</b></a><a class="ch" href="#c32">三十二　<b>样布</b></a><a class="ch" href="#c33">三十三　<b>后弄口</b></a><a class="ch" href="#c34">三十四　<b>苏州码子</b></a><a class="ch" href="#c35">三十五　<b>汤圆</b></a><a class="ch" href="#c36">三十六　<b>打浦桥</b></a><a class="vol" href="#v6">第六卷 · 朱家角</a><a class="ch" href="#c37">三十七　<b>签收簿</b></a><a class="ch" href="#c38">三十八　<b>亲批</b></a><a class="ch" href="#c39">三十九　<b>朱家角</b></a><a class="ch" href="#c40">四十　<b>三十七分之一</b></a><a class="ch" href="#c41">四十一　<b>我不认得</b></a><a class="vol" href="#v7">第七卷 · 死人簿</a><a class="ch" href="#c42">四十二　<b>镇口</b></a><a class="ch" href="#c43">四十三　<b>枇杷茶</b></a><a class="ch" href="#c44">四十四　<b>绸缎庄</b></a><a class="ch" href="#c45">四十五　<b>六十步</b></a><a class="ch" href="#c46">四十六　<b>一封电报</b></a><a class="ch" href="#c47">四十七　<b>死人簿</b></a><a class="ch" href="#c48">四十八　<b>亡者名单</b></a><a class="ch" href="#c49">四十九　<b>留</b></a><a class="ch" href="#c50">五十　<b>子时小潮</b></a></nav></aside>
 <main class="wrap">
 <h1>孤岛</h1>
-<div class="sub">谍战线 · 正文 · 第一至50章</div>
-<nav><a href="#c1">四舍</a><a href="#c2">老锁匠</a><a href="#c3">半个名字</a><a href="#c4">测向车</a><a href="#c5">裁缝</a><a href="#c6">年刊</a><a href="#c7">皮货店</a><a href="#c8">街口那些生面孔</a><a href="#c9">胡佛总统号</a><a href="#c10">四舍的人不欠账</a><a href="#c11">斜桥</a><a href="#c12">不要打我的脸</a><a href="#c13">刀柄朝里</a><a href="#c14">汽艇</a><a href="#c15">石子</a><a href="#c16">空屋</a><a href="#c17">两辆脚踏车</a><a href="#c18">磨盘</a><a href="#c19">他拿老周去换他爹</a><a href="#c20">子时潮水</a><a href="#c21">玻璃门后</a><a href="#c22">一副眼镜</a><a href="#c23">棺出后楼</a><a href="#c24">独饵</a><a href="#c25">换一个人</a><a href="#c26">换的是账</a><a href="#c27">以通敌论</a><a href="#c28">照一照光</a><a href="#c29">对口供</a><a href="#c30">饵</a><a href="#c31">他不走</a><a href="#c32">样布</a><a href="#c33">后弄口</a><a href="#c34">苏州码子</a><a href="#c35">汤圆</a><a href="#c36">打浦桥</a><a href="#c37">签收簿</a><a href="#c38">亲批</a><a href="#c39">朱家角</a><a href="#c40">三十七分之一</a><a href="#c41">我不认得</a><a href="#c42">镇口</a><a href="#c43">枇杷茶</a><a href="#c44">绸缎庄</a><a href="#c45">六十步</a><a href="#c46">一封电报</a><a href="#c47">死人簿</a><a href="#c48">亡者名单</a><a href="#c49">留</a><a href="#c50">子时小潮</a></nav>
+<div class="sub">谍战线 · 正文 · 第一至五十章</div>
+<div class="vh" id="v1">第一卷　雨夜</div>
 <h2 id="c1">第一章 四舍</h2>
 <div class="when">民国二十八年九月</div>
 <p>雨是下午起的。</p>
@@ -761,6 +783,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <p>那个姑娘坐在床沿上，背挺得很直，膝盖上搁着一件灰鼠大衣，叠得整整齐齐。屋里没有炉子，她冻得嘴唇发白，可她没有把那件大衣披上。</p>
 <p>她抬起头，看见了方窗里他的脸。她没有躲，也没有求，就那么看着他，看了一会儿，又把头低下去，用手指把大衣领子上的一撮毛理顺了。</p>
 <p>承舟从方窗前走开了。</p>
+<div class="vh" id="v2">第二卷　密约</div>
 <h2 id="c8">第八章 街口那些生面孔</h2>
 <div class="when">民国二十八年十二月二十八日至三十一日</div>
 <p>李士群审她，没有用刑。</p>
@@ -1603,6 +1626,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <p>楼下的牛在倒嚼，咯吱咯吱的。他把撕成两半的纸叠在一起，夹进了那本《古文观止》。</p>
 <p>第二天早上，交通来取空瓶子，瓶盖底下多了一张字条，只有一句：</p>
 <p>下一班船，鲁班不走。</p>
+<div class="vh" id="v3">第三卷　潮位</div>
 <h2 id="c16">第十六章 空屋</h2>
 <div class="when">民国二十九年四月上旬</div>
 <p>那个报务员是四月二日夜里在电台楼下被拿住的。</p>
@@ -2341,6 +2365,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <p>晴气看了看那副眼镜，看了看那条缠着铜丝的镜腿。</p>
 <p>“四天。”他说，“名字。”</p>
 <p>承舟鞠了一躬，退了出去。</p>
+<div class="vh" id="v4">第四卷　菜刀</div>
 <h2 id="c24">第二十四章 独饵</h2>
 <div class="when">民国二十九年七月中旬</div>
 <p>殡仪馆的后屋原来是停灵的地方，墙刷过一遍白灰，还是盖不住一股香烛和福尔马林混在一起的气味。屋里一张木板床，一张方凳，一盏煤油灯。前院整天有人哭，有人念经，有人敲木鱼。墨言住了一个礼拜，习惯了，夜里听不见木鱼声反倒睡不着。</p>
@@ -2931,6 +2956,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <p>陈恭澍坐在他对面，等他说话。</p>
 <p>“承舟的字。”墨言说。他把包药纸折好，压在戴笠那封改令底下。</p>
 <p>楼下的缝纫机停了。裁缝的老婆在楼下喊吃饭，喊了两声，裁缝应了一声，上楼的脚步声咚咚咚的，在楼梯口停了一下，又下去了。</p>
+<div class="vh" id="v5">第五卷　汤圆</div>
 <h2 id="c30">第三十章 饵</h2>
 <div class="when">民国二十九年十一月</div>
 <p>晴气放她出来，是十一月四日。</p>
@@ -3529,6 +3555,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <p>他闭上了眼睛。</p>
 <p>承舟在床边站了一刻钟，王天木没有再睁眼。</p>
 <p>他出门的时候，走廊尽头有一个人靠在墙上抽烟。是李士群新换的眼线，一个月前才调进来的。那人看了他一眼，在本子上记了一笔。</p>
+<div class="vh" id="v6">第六卷　朱家角</div>
 <h2 id="c37">第三十七章 签收簿</h2>
 <div class="when">民国三十年三月</div>
 <p>王天木说，那条线被情报科以外的人接走了。</p>
@@ -3994,6 +4021,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <p>那天夜里，她坐在床沿上，把左脚那只鞋脱了下来，放在床脚。右脚那只没有脱。</p>
 <p>她躺下去，盖好被子，左脚的脚趾在被子底下动了动。</p>
 <p>天亮的时候，那只鞋还在床脚，鞋尖朝着门。</p>
+<div class="vh" id="v7">第七卷　死人簿</div>
 <h2 id="c42">第四十二章 镇口</h2>
 <div class="when">民国三十年七月</div>
 <p>七月一日，苏南的清乡开张了。</p>
@@ -4900,5 +4928,18 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 <p>墨言点了点头。</p>
 <p>窗外是一九四二年一月的上海。公共租界的电车已经换了日本人的牌子，这一片还挂着维希的旗，巡捕照旧站岗。</p>
 <p>她低下头，把下一组电码按了出去。</p>
-<div class="end">—— 未完 ——</div>
+<div class="end">—— 全书完 ——</div>
 </main>
+<script>
+const side=document.querySelector('.side'),scrim=document.querySelector('.scrim'),btn=document.querySelector('.tocbtn');
+function setOpen(o){side.classList.toggle('open',o);scrim.classList.toggle('open',o);btn.setAttribute('aria-expanded',o)}
+btn.addEventListener('click',()=>setOpen(!side.classList.contains('open')));
+scrim.addEventListener('click',()=>setOpen(false));
+side.addEventListener('click',e=>{if(e.target.closest('a'))setOpen(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false)});
+const links=new Map([...document.querySelectorAll('.toc .ch')].map(a=>[a.getAttribute('href').slice(1),a]));
+let cur=null;
+const io=new IntersectionObserver(es=>{for(const e of es){if(e.isIntersecting){const a=links.get(e.target.id);if(a&&a!==cur){cur&&cur.classList.remove('on');a.classList.add('on');cur=a;
+const r=a.getBoundingClientRect(),sr=side.getBoundingClientRect();if(r.top<sr.top+40||r.bottom>sr.bottom-40)a.scrollIntoView({block:'center'})}}}},{rootMargin:'0px 0px -70% 0px'});
+document.querySelectorAll('h2[id]').forEach(h=>io.observe(h));
+</script>
