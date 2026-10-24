@@ -35,6 +35,7 @@ if ledger.exists():
     if len(sec) == 2:
         for m in re.finditer(r"^\| ([^|]+?) \| (\d{4}) \|", sec[1].split(chr(10) + "## ", 1)[0], re.M):
             if m[1] != "关键词": EVENTS.append(([k.strip() for k in m[1].split("、")], int(m[2])))
+SKIP = re.findall(r"^- 年份检查忽略：(.+)$", ledger.read_text(encoding="utf-8"), re.M) if ledger.exists() else []
 REL = {"大前年": 3, "前年": 2, "去年": 1, "今年": 0}
 
 # 一、账本时间线星期
@@ -81,7 +82,8 @@ for p in sorted(root.glob("[0-9][0-9]-*.md")):
                 out.append(f"{tag}:{i} 日期不存在：{m[0]}")
     if years and EVENTS:
         for i, l in enumerate(L, 1):
-            for sent in re.split(r"[。！？]", l):
+            for sent in re.split(r"[。！？；，]", l):
+                if any(k in sent for k in SKIP): continue
                 for w, d in REL.items():
                     for m in re.finditer(w, sent):
                         if w == "前年" and sent[max(0, m.start() - 1):m.start()] == "大": continue
