@@ -32,6 +32,7 @@ hr::before{content:"⁂"}
 .toc a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .side{position:fixed;top:0;bottom:0;left:0;width:15.5rem;overflow-y:auto;padding:28px 18px 40px 22px;background:var(--paper);border-right:1px solid var(--line);z-index:20;scrollbar-width:thin}
 .side .bk{font-family:var(--display);font-size:1.25rem;letter-spacing:.16em;margin-bottom:1rem}
+.cover{display:block;width:min(100%,26rem);margin:4.5rem auto -2.2rem;border-radius:4px;box-shadow:0 6px 24px rgb(0 0 0/.25)}
 .vh{font-family:var(--display);text-align:center;color:var(--seal);font-size:1.05rem;letter-spacing:.3em;margin:4.5rem 0 -1.6rem;scroll-margin-top:24px}
 .tocbtn{position:fixed;z-index:25;top:max(10px,calc(env(safe-area-inset-top,0px) + 8px));left:max(10px,env(safe-area-inset-left,0px));font:600 .85rem var(--ui);color:var(--accent);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:.35rem .9rem;min-height:36px;cursor:pointer}
 .tocbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -127,6 +128,9 @@ for i, p in enumerate(files, 1):
     if num in vols:
         vi += 1; vn, vt = vols[num]
         toc.append(f'<a class="vol" href="#v{vi}">{html.escape(vn)} · {html.escape(vt)}</a>')
+        cv = next((c for c in (src / "covers" / f"v{vi}.jpg", src / "covers" / f"v{vi}.png") if c.exists()), None)
+        if cv:
+            body.append(f'<img class="cover" src="covers/{cv.name}" alt="{html.escape(vn)} {html.escape(vt)}封面" loading="lazy">')
         body.append(f'<div class="vh" id="v{vi}">{html.escape(vn)}　{html.escape(vt)}</div>')
     toc.append(f'<a class="ch" href="#{cid}">{cnum(num)}　<b>{html.escape(short)}</b></a>')
     body += part
