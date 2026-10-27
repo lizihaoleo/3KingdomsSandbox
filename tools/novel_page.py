@@ -132,9 +132,9 @@ for i, p in enumerate(files, 1):
         if cv:
             body.append(f'<img class="cover" src="covers/{cv.name}" alt="{html.escape(vn)} {html.escape(vt)}封面" loading="lazy">')
         body.append(f'<div class="vh" id="v{vi}">{html.escape(vn)}　{html.escape(vt)}</div>')
-    toc.append(f'<a class="ch" href="#{cid}">{cnum(num)}　<b>{html.escape(short)}</b></a>')
+    toc.append(f'<a class="ch" href="#{cid}"><b>{html.escape(short)}</b></a>' if num == 0 else f'<a class="ch" href="#{cid}">{cnum(num)}　<b>{html.escape(short)}</b></a>')
     body += part
-n = len(files)
+n = len([f for f in files if int(f.name[:2]) > 0])
 last = max([int(x) for x in re.findall(r"-(\d+)", vf.read_text(encoding="utf-8"))] or [0]) if vf.exists() else 0
 end = "—— 全书完 ——" if last and n >= last else "—— 未完 ——"
 page = f"""<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{book}</title>
