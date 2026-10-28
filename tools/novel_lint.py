@@ -1,5 +1,5 @@
 """小说稿检查：机器能查的不交给模型。
-用法：python3 tools/novel_lint.py novel/谍战线 [--fill] [--from N] [--to M]
+用法：python3 tools/novel_lint.py novel/孤岛 [--fill] [--from N] [--to M]
   --fill    按日期补全/改正 账本.md 时间线的“星期”一栏
   --from/--to  只查这些章（默认全部）
 检查：账本时间线星期；正文禁用词与阳历“X月初X”；电文字条里的真名；正文里“X月X日，星期X”是否对得上；

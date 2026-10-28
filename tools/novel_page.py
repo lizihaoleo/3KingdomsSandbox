@@ -1,5 +1,5 @@
 """把 novel/<线名>/NN-*.md 合成一页手机友好的 HTML，供发布成私有页面在手机上读。
-用法：python3 tools/novel_page.py novel/谍战线   →  novel/谍战线/正文.html
+用法：python3 tools/novel_page.py novel/孤岛   →  novel/孤岛/正文.html
 可选 novel/<线名>/分卷.txt，每行“第一卷 雨夜 1-7”：左侧目录按卷分组，正文插卷名。"""
 import html, re, sys
 from pathlib import Path

@@ -1,14 +1,17 @@
 # 《孤岛》正文
 
-依据 `outline/大纲-谍战线.md`（第五稿）写作。每章一个文件，文件名是“两位序号-章名”。
+全书只有这一本。第一至七章是二稿（按 `加强版章纲-全书.md` 改过情节），第八至五十章暂为重写版，之后逐卷按章纲改成二稿。旧的原稿和重写版已删去，需要时从 git 历史里找。
 
-手机阅读页：`python3 tools/novel_page.py novel/谍战线` 生成 `正文.html`，已发布为私有页面 https://claude.ai/artifact/CQmoWtchFybbURaLVNpx9x 。每次改动正文后重新生成并发布到这个链接（用同一文件路径发布即可保持链接不变）。
+- 事实：`账本.md`（原稿总账）＋`账本补记.md`（重写版、二稿补记，冲突时以补记为准）。
+- 写法：`重写说明.md`；情节：`加强版章纲-全书.md`。
+- 手机阅读页：`python3 -X utf8 tools/novel_page.py novel/孤岛` 生成 `正文.html`，发布到私有页面 https://claude.ai/artifact/WSh6XbBeVR1uCY7mmCF51n （用同一文件路径发布，保持链接不变）。
+- 检查：`python3 -X utf8 tools/novel_lint.py novel/孤岛`，必须清零。
 
 ## 写作流程（第十一章起）
 
 1. 动笔前读：大纲本章、`账本.md`、本 README 的文风约定与技巧表、推演记录对应回的摘要。不读前文全文，需要时按关键词查。
 2. 以五章为一批写完，每章写完把“本章新增事实”追加进账本第七节，并更新账本各表。
-3. 跑 `python3 tools/novel_lint.py novel/谍战线 --fill`，再跑一遍不带 `--fill` 的，清零。
+3. 跑 `python3 tools/novel_lint.py novel/孤岛 --fill`，再跑一遍不带 `--fill` 的，清零。
 4. 派一个复查代理，只读“这五章＋账本＋本 README”，找漏洞、看不懂和机械腔，按它的意见改。
 5. 生成阅读页、发布、提交推送。大纲层面的改动才回头扫前文，用关键词定位，不重读全书。
 
